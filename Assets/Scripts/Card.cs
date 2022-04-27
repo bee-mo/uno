@@ -28,6 +28,8 @@ public class Card : MonoBehaviour {
   private Transform display_image;
   private CardGenerator.CardInfo card_info_;
 
+  private float card_height_;
+
   void Start() {
     SetToRandomCard();
 
@@ -35,10 +37,10 @@ public class Card : MonoBehaviour {
     button.onClick.AddListener(SelectCard);
 
     display_image = transform.Find("Display Image");
-    float card_height = GetComponent<RectTransform>().rect.height;
+    card_height_ = GetComponent<RectTransform>().rect.height;
     deselected_position_y_ = 0.0f;//transform.localPosition.y;
 
-    selected_position_y_ = 0.4f * card_height;
+    selected_position_y_ = 0.4f * card_height_;
   }
 
   void Update() {
@@ -64,8 +66,8 @@ public class Card : MonoBehaviour {
     // button.image.sprite = card_info_.cardSprite;
     var img_dest = transform.Find("Display Image");
     Debug.Assert(img_dest != null);
-    Debug.Assert(img_dest.GetComponent<Image>() != null);
-    img_dest.GetComponent<Image>().sprite = card_info_.cardSprite;
+    Debug.Assert(img_dest.GetComponent<SpriteRenderer>() != null);
+    img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
   }
 
   public void PlayCard() {
@@ -129,13 +131,13 @@ public class Card : MonoBehaviour {
       float start = deselected_position_y_;//CreateDeselectedVectorPosition();
       float end = selected_position_y_;//CreateSelectedVectorPosition();
 
-      float originalCardHeight = display_image.GetComponent<RectTransform>().sizeDelta.y;
+      //float originalCardHeight = display_image.GetComponent<RectTransform>().sizeDelta.y;
       Vector2 boxSize = transform.GetComponent<RectTransform>().sizeDelta;
 
-      boxSize.y = Mathf.Lerp(originalCardHeight, originalCardHeight * 1.4f, select_lerp_);
+      boxSize.y = Mathf.Lerp(card_height_, card_height_ * 1.4f, select_lerp_);
       transform.GetComponent<RectTransform>().sizeDelta = boxSize;
 
-      float boxDiff = (boxSize.y - originalCardHeight) / 2.0f;
+      float boxDiff = (boxSize.y - card_height_) / 2.0f;
       transform.localPosition = new Vector3(transform.localPosition.x, boxDiff, transform.localPosition.z);
 
       display_image.localPosition = new Vector3(0.0f, Mathf.Lerp(start, end, select_lerp_) - boxDiff, 0.0f);
@@ -147,13 +149,13 @@ public class Card : MonoBehaviour {
       float start = selected_position_y_;
       float end = deselected_position_y_;
 
-      float originalCardHeight = display_image.GetComponent<RectTransform>().sizeDelta.y;
+      //float originalCardHeight = display_image.GetComponent<RectTransform>().sizeDelta.y;
       Vector2 boxSize = transform.GetComponent<RectTransform>().sizeDelta;
 
-      boxSize.y = Mathf.Lerp(originalCardHeight, originalCardHeight * 1.4f, select_lerp_);
+      boxSize.y = Mathf.Lerp(card_height_, card_height_ * 1.4f, select_lerp_);
       transform.GetComponent<RectTransform>().sizeDelta = boxSize;
 
-      float boxDiff = (boxSize.y - originalCardHeight) / 2.0f;
+      float boxDiff = (boxSize.y - card_height_) / 2.0f;
       transform.localPosition = new Vector3(transform.localPosition.x, boxDiff, transform.localPosition.z);
 
       //transform.localPosition = Vector3.Lerp(start, end, 1 - select_lerp_);

@@ -13,6 +13,8 @@ public class HandController : MonoBehaviour {
   public GameObject cardPrefab;
   private Transform selectedCard_;
 
+  private Transform playPile;
+
 
   // Start is called before the first frame update
   void Start() {
@@ -22,6 +24,7 @@ public class HandController : MonoBehaviour {
     cardWidth = cardPrefab.transform.GetComponent<RectTransform>().rect.width;
     cardHeight = cardPrefab.transform.GetComponent<RectTransform>().rect.height;
     handWidth = maxHandWidth * cardWidth;
+    playPile = GameObject.Find("PlayPile").transform;
   }
 
   // Update is called once per frame
@@ -56,7 +59,7 @@ public class HandController : MonoBehaviour {
     cardCount = newCardCount;
   }
 
-  //ideally a drag and drop but will just use a play card button to play currently selected card
+  
   public void PlayCard() {
     if (selectedCard_ != null) {
       Destroy(selectedCard_.gameObject); //hand is only tracked by the objects - will need to do more when we have more of a hand
@@ -81,7 +84,17 @@ public class HandController : MonoBehaviour {
     } else {
       spacingIncrement = cardWidth;
     }
+    //removedCard.SetParent();
+    Transform displayCard = removedCard.Find("Display Image");
+    Vector3 cardRotation = displayCard.eulerAngles;
+    cardRotation.z+= Random.Range(-45.0f, 45.0f);
 
+    displayCard.SetParent(playPile, false);
+
+    float cardZ = (float)-playPile.childCount;
+    displayCard.localPosition = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f),   cardZ);
+
+    displayCard.eulerAngles = cardRotation; 
     Destroy(removedCard.gameObject);
 
     //Each existing card will be moved to their new positions
