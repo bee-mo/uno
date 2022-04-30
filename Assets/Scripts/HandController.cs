@@ -37,6 +37,8 @@ public class HandController : MonoBehaviour {
 
     float spacingIncrement = 0.0f;
     float leftEdge = -(newCardCount - 1) * 0.5f * cardWidth;
+
+    float currentCardZ = -0.01f;
     if (newCardCount * cardWidth > handWidth) {
       spacingIncrement = cardWidth - ((cardWidth * newCardCount - handWidth) / newCardCount);
 
@@ -47,26 +49,20 @@ public class HandController : MonoBehaviour {
 
     //Each existing card will be moved to their new positions
     foreach (Transform child in handLayout) {
-      child.GetComponent<Card>().SetCardPosition(leftEdge);
+      child.GetComponent<Card>().SetCardPosition(leftEdge, currentCardZ);
       leftEdge += spacingIncrement;
+
+      currentCardZ += -0.01f;
     }
 
     //Add the new card
     GameObject drawnCard = Instantiate(cardPrefab, handLayout);
-    drawnCard.transform.localPosition = new Vector3(leftEdge, -cardHeight * 1.5f, 0.0f);
-    drawnCard.transform.GetComponent<Card>().SetCardPosition(leftEdge);
+    drawnCard.transform.localPosition = new Vector3(leftEdge, -cardHeight * 1.5f, currentCardZ);
+    drawnCard.transform.GetComponent<Card>().SetCardPosition(leftEdge, currentCardZ);
     drawnCard.transform.GetComponent<Card>().SetHandController(handLayout.GetComponent<HandController>());
     cardCount = newCardCount;
   }
 
-  
-  public void PlayCard() {
-    if (selectedCard_ != null) {
-      Destroy(selectedCard_.gameObject); //hand is only tracked by the objects - will need to do more when we have more of a hand
-      selectedCard_ = null;
-      UpdateCardSpacing();
-    }
-  }
 
   public void RemoveCard(Transform removedCard) {
     //Calculate positions of current cards based on the new amount of cards
@@ -76,6 +72,7 @@ public class HandController : MonoBehaviour {
     float spacingIncrement = 0.0f;
 
     float leftEdge = -(newCardCount - 1) * 0.5f * cardWidth;
+
 
     if (newCardCount * cardWidth > handWidth) {
       spacingIncrement = cardWidth - ((cardWidth * newCardCount - handWidth) / newCardCount);
@@ -95,38 +92,44 @@ public class HandController : MonoBehaviour {
     displayCard.localPosition = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f),   cardZ);
 
     displayCard.eulerAngles = cardRotation; 
+
+
     Destroy(removedCard.gameObject);
+
+
+    float currentCardZ = -0.01f;
 
     //Each existing card will be moved to their new positions
     foreach (Transform child in handLayout) {
       if (child != removedCard) {
-        child.GetComponent<Card>().SetCardPosition(leftEdge);
+        child.GetComponent<Card>().SetCardPosition(leftEdge, currentCardZ);
         leftEdge += spacingIncrement;
+        currentCardZ += -0.01f;
       }
     }
 
     cardCount = newCardCount;
   }
 
-  //This occurs when a card is drawn or a card is played
-  public void UpdateCardSpacing() {
+  // //This occurs when a card is drawn or a card is played
+  // public void UpdateCardSpacing() {
 
-    cardCount = handLayout.childCount; //newest card count
-    float spacingIncrement = 0.0f;
-    float leftEdge = -(cardCount - 1) * 0.5f * cardWidth;
+  //   cardCount = handLayout.childCount; //newest card count
+  //   float spacingIncrement = 0.0f;
+  //   float leftEdge = -(cardCount - 1) * 0.5f * cardWidth;
 
-    if (cardCount * cardWidth > handWidth) {
-      spacingIncrement = cardWidth - ((cardWidth * cardCount - handWidth) / cardCount);
-      leftEdge = -handWidth / 2.0f + cardWidth * 0.5f;
-    } else {
-      spacingIncrement = cardWidth;
-    }
+  //   if (cardCount * cardWidth > handWidth) {
+  //     spacingIncrement = cardWidth - ((cardWidth * cardCount - handWidth) / cardCount);
+  //     leftEdge = -handWidth / 2.0f + cardWidth * 0.5f;
+  //   } else {
+  //     spacingIncrement = cardWidth;
+  //   }
 
-    foreach (Transform child in handLayout) {
-      child.GetComponent<Card>().SetCardPosition(leftEdge);
-      leftEdge += spacingIncrement;
-    }
-  }
+  //   foreach (Transform child in handLayout) {
+  //     child.GetComponent<Card>().SetCardPosition(leftEdge);
+  //     leftEdge += spacingIncrement;
+  //   }
+  // }
 
 }
 

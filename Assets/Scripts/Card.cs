@@ -191,8 +191,13 @@ public class Card : MonoBehaviour {
     );
   }
 
-  public void SetCardPosition(float xPosition) {
+  public void SetCardPosition(float xPosition, float zPosition) {
     start_rearrange_position_x_ = transform.localPosition.x;
+
+    Vector3 localPos = transform.localPosition;
+    localPos.z = zPosition;
+    transform.localPosition = localPos;
+
     end_rearrange_position_x_ = xPosition;
     start_card_rearrange_ = true;
 
