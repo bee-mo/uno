@@ -12,6 +12,7 @@ public class HandController : MonoBehaviour {
   private float handWidth; //the calculated max hand width
   public GameObject cardPrefab;
   private Transform selectedCard_;
+  private bool is_main_player_ = true;
 
   private Transform playPile;
 
@@ -54,12 +55,22 @@ public class HandController : MonoBehaviour {
     //Add the new card
     GameObject drawnCard = Instantiate(cardPrefab, handLayout);
     drawnCard.transform.localPosition = new Vector3(leftEdge, -cardHeight * 1.5f, 0.0f);
-    drawnCard.transform.GetComponent<Card>().SetCardPosition(leftEdge);
-    drawnCard.transform.GetComponent<Card>().SetHandController(handLayout.GetComponent<HandController>());
+    var card = drawnCard.transform.GetComponent<Card>();
+    card.SetCardPosition(leftEdge);
+    card.SetHandController(handLayout.GetComponent<HandController>());
+    if (is_main_player_) card.FlipCard(Card.CardPosition.FRONT);
+    else card.FlipCard(Card.CardPosition.BACK);
     cardCount = newCardCount;
   }
 
-  
+  public void SetAsMainPlayer() {
+    is_main_player_ = true;
+  }
+
+  public void SetAsEnemy() {
+    is_main_player_ = false;
+  }
+
   public void PlayCard() {
     if (selectedCard_ != null) {
       Destroy(selectedCard_.gameObject); //hand is only tracked by the objects - will need to do more when we have more of a hand
@@ -87,14 +98,14 @@ public class HandController : MonoBehaviour {
     //removedCard.SetParent();
     Transform displayCard = removedCard.Find("Display Image");
     Vector3 cardRotation = displayCard.eulerAngles;
-    cardRotation.z+= Random.Range(-45.0f, 45.0f);
+    cardRotation.z += Random.Range(-45.0f, 45.0f);
 
     displayCard.SetParent(playPile, false);
 
     float cardZ = (float)-playPile.childCount;
-    displayCard.localPosition = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f),   cardZ);
+    displayCard.localPosition = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f), cardZ);
 
-    displayCard.eulerAngles = cardRotation; 
+    displayCard.eulerAngles = cardRotation;
     Destroy(removedCard.gameObject);
 
     //Each existing card will be moved to their new positions
