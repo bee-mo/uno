@@ -48,6 +48,7 @@ public class CardGenerator : MonoBehaviour {
   }
 
   static CardGenerator generator_ = null;
+  private Sprite back_card_spite_ = null;
 
   public static CardGenerator GetSingleton() {
     // if (generator_ == null) generator_ = new CardGenerator();
@@ -69,6 +70,19 @@ public class CardGenerator : MonoBehaviour {
     CardColor color = (CardColor)(int)Random.Range(0, 3);
     CardType type = (CardType)(int)Random.Range(0, 14);
     return new CardInfo(type, color);
+  }
+
+  public Sprite GetCardBackSprite() {
+    if (back_card_spite_) return back_card_spite_;
+
+    var back = transform.Find("Uno Card Back").gameObject;
+    Debug.Assert(back);
+
+    Image img = back.GetComponent<Image>();
+    Debug.Assert(img);
+    Texture2D tex = CloneTexture(img.sprite.texture);
+    back_card_spite_ = Sprite.Create(tex, new Rect(0.0f, 0.0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+    return back_card_spite_;
   }
 
   private void RegisterCardSprites() {

@@ -29,6 +29,7 @@ public class Card : MonoBehaviour {
   private CardGenerator.CardInfo card_info_;
 
   private float card_height_;
+  private bool is_card_back_ = false;
 
   void Start() {
     SetToRandomCard();
@@ -49,6 +50,27 @@ public class Card : MonoBehaviour {
     HandleCardRearrange();
   }
 
+  public enum CardPosition { FRONT, BACK };
+  public void FlipCard(CardPosition position) {
+    var img_dest = transform.Find("Display Image");
+    Debug.Assert(img_dest);
+
+    switch (position) {
+      case CardPosition.FRONT: {
+          if (!is_card_back_) return;
+          img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
+          is_card_back_ = false;
+          break;
+        }
+      case CardPosition.BACK: {
+          if (is_card_back_) return;
+          img_dest.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
+          is_card_back_ = true;
+          break;
+        }
+    }
+  }
+
   public void SetHandController(HandController newController) {
     handControl_ = newController;
   }
@@ -62,12 +84,12 @@ public class Card : MonoBehaviour {
 
   private void SetToRandomCard() {
     card_info_ = CardGenerator.GetSingleton().GenerateRandomCard();
-    button = GetComponent<Button>();
-    // button.image.sprite = card_info_.cardSprite;
+
     var img_dest = transform.Find("Display Image");
     Debug.Assert(img_dest != null);
     Debug.Assert(img_dest.GetComponent<SpriteRenderer>() != null);
-    img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
+    // img_dest.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
+    // img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
   }
 
   public void PlayCard() {
