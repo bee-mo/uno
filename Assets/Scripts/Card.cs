@@ -25,19 +25,22 @@ public class Card : MonoBehaviour {
   private float start_rearrange_position_x_;
   private float end_rearrange_position_x_;
 
-  private Transform display_image;
+  private Transform display_image_;
   private CardGenerator.CardInfo card_info_;
 
   private float card_height_;
   private bool is_card_back_ = false;
 
-  void Start() {
+  void Awake() {
+    display_image_ = transform.Find("Display Image");
+    Debug.Assert(display_image_ != null);
     SetToRandomCard();
+  }
 
+  void Start() {
     button = GetComponent<Button>();
     button.onClick.AddListener(SelectCard);
 
-    display_image = transform.Find("Display Image");
     card_height_ = GetComponent<RectTransform>().rect.height;
     deselected_position_y_ = 0.0f;//transform.localPosition.y;
 
@@ -52,19 +55,14 @@ public class Card : MonoBehaviour {
 
   public enum CardPosition { FRONT, BACK };
   public void FlipCard(CardPosition position) {
-    var img_dest = transform.Find("Display Image");
-    Debug.Assert(img_dest);
-
     switch (position) {
       case CardPosition.FRONT: {
-          if (!is_card_back_) return;
-          img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
+          display_image_.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
           is_card_back_ = false;
           break;
         }
       case CardPosition.BACK: {
-          if (is_card_back_) return;
-          img_dest.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
+          display_image_.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
           is_card_back_ = true;
           break;
         }
@@ -84,12 +82,11 @@ public class Card : MonoBehaviour {
 
   private void SetToRandomCard() {
     card_info_ = CardGenerator.GetSingleton().GenerateRandomCard();
+    Debug.Assert(card_info_ != null);
 
-    var img_dest = transform.Find("Display Image");
-    Debug.Assert(img_dest != null);
-    Debug.Assert(img_dest.GetComponent<SpriteRenderer>() != null);
-    // img_dest.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
-    // img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
+    Debug.Assert(display_image_.GetComponent<SpriteRenderer>() != null);
+    // display_image_.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
+    // display_image_.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
   }
 
   public void PlayCard() {
@@ -162,7 +159,7 @@ public class Card : MonoBehaviour {
       float boxDiff = (boxSize.y - card_height_) / 2.0f;
       transform.localPosition = new Vector3(transform.localPosition.x, boxDiff, transform.localPosition.z);
 
-      display_image.localPosition = new Vector3(0.0f, Mathf.Lerp(start, end, select_lerp_) - boxDiff, 0.0f);
+      display_image_.localPosition = new Vector3(0.0f, Mathf.Lerp(start, end, select_lerp_) - boxDiff, 0.0f);
 
       select_lerp_ = Mathf.Clamp(select_lerp_ + draw_speed_ * Time.deltaTime, 0.0f, 1.0f);
     } else {
@@ -181,7 +178,7 @@ public class Card : MonoBehaviour {
       transform.localPosition = new Vector3(transform.localPosition.x, boxDiff, transform.localPosition.z);
 
       //transform.localPosition = Vector3.Lerp(start, end, 1 - select_lerp_);
-      display_image.localPosition = new Vector3(0.0f, Mathf.Lerp(start, end, 1 - select_lerp_) - boxDiff, 0.0f);
+      display_image_.localPosition = new Vector3(0.0f, Mathf.Lerp(start, end, 1 - select_lerp_) - boxDiff, 0.0f);
 
       select_lerp_ = Mathf.Clamp(select_lerp_ - draw_speed_ * Time.deltaTime, 0.0f, 1.0f);
     }
