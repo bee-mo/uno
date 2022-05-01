@@ -111,6 +111,7 @@ public class Card : MonoBehaviour {
     if (selecting_card_) {
       is_played = true;
       handControl_.RemoveCard(transform);
+      FlipCard(CardPosition.FRONT);
     }
 
   }
