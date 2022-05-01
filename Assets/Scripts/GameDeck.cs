@@ -18,6 +18,8 @@ public class GameDeck : MonoBehaviour {
   private Vector3 draw_start_pos_, draw_end_pos_;
   private float card_draw_lerp_ = 0.0f;
   private float draw_speed_ = 2.5f;
+  private bool draw_card_to_main_player_ = false;
+  private HandController hand_drawing_;
 
   public float fullness_ = 1.0f;
   private const int kDeckThickness = 12;
@@ -37,9 +39,20 @@ public class GameDeck : MonoBehaviour {
     HandleCardDraw();
   }
 
-  public void DrawCard() {
+  public void DrawMainPlayerCard(HandController hand) {
     // for now, draw card only for the main player
     card_draw_in_progress_ = true;
+    draw_card_to_main_player_ = true;
+
+    hand_drawing_ = hand;
+  }
+
+  public void DrawEnemyPlayerCard(HandController hand) {
+    // for now, draw card only for the main player
+    card_draw_in_progress_ = true;
+    draw_card_to_main_player_ = false;
+
+    hand_drawing_ = hand;
   }
 
   // @def Update the deck sprite to reflect the fullness of the deck.
@@ -65,7 +78,8 @@ public class GameDeck : MonoBehaviour {
         drawable_card_.SetActive(true);
         draw_start_pos_ = drawable_card_.transform.position;
         draw_end_pos_ = drawable_card_.transform.position;
-        draw_end_pos_.y -= 6.0f;
+        if (draw_card_to_main_player_) draw_end_pos_.y -= 6.0f;
+        else draw_end_pos_.y += 6.0f;
       } else if (card_draw_lerp_ != 1.0) {
         drawable_card_.transform.position = Vector3.Lerp(draw_start_pos_, draw_end_pos_, card_draw_lerp_);
         card_draw_lerp_ += Time.deltaTime * draw_speed_;
@@ -78,6 +92,10 @@ public class GameDeck : MonoBehaviour {
 
         draw_start_pos_ = Vector3.zero;
         draw_end_pos_ = Vector3.zero;
+
+        // Call the hand controller to draw the card now
+        Debug.Assert(hand_drawing_);
+        hand_drawing_.DrawCard();
       }
     }
   }

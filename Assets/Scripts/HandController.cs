@@ -12,6 +12,7 @@ public class HandController : MonoBehaviour {
   private float handWidth; //the calculated max hand width
   public GameObject cardPrefab;
   private Transform selectedCard_;
+  private bool is_main_player_ = true;
 
   private Transform playPile;
 
@@ -57,10 +58,22 @@ public class HandController : MonoBehaviour {
 
     //Add the new card
     GameObject drawnCard = Instantiate(cardPrefab, handLayout);
+
     drawnCard.transform.localPosition = new Vector3(leftEdge, -cardHeight * 1.5f, currentCardZ);
-    drawnCard.transform.GetComponent<Card>().SetCardPosition(leftEdge, currentCardZ);
-    drawnCard.transform.GetComponent<Card>().SetHandController(handLayout.GetComponent<HandController>());
+    var card = drawnCard.transform.GetComponent<Card>();
+    card.SetCardPosition(leftEdge, currentCardZ);
+    card.SetHandController(handLayout.GetComponent<HandController>());
+    if (is_main_player_) card.FlipCard(Card.CardPosition.FRONT);
+    else card.FlipCard(Card.CardPosition.BACK);
     cardCount = newCardCount;
+  }
+
+  public void SetAsMainPlayer() {
+    is_main_player_ = true;
+  }
+
+  public void SetAsEnemy() {
+    is_main_player_ = false;
   }
 
 
@@ -84,19 +97,24 @@ public class HandController : MonoBehaviour {
     //removedCard.SetParent();
     Transform displayCard = removedCard.Find("Display Image");
     Vector3 cardRotation = displayCard.eulerAngles;
-    cardRotation.z+= Random.Range(-45.0f, 45.0f);
-
-    displayCard.SetParent(playPile, false);
-
-    float cardZ = (float)-playPile.childCount;
-    displayCard.localPosition = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f),   cardZ);
-
-    displayCard.eulerAngles = cardRotation; 
+    cardRotation.z += Random.Range(-45.0f, 45.0f);
 
 
-    Destroy(removedCard.gameObject);
+    removedCard.SetParent(playPile, true);
+    //displayCard.SetParent(playPile, false);
 
+    float cardZ = (float)-playPile.childCount - 1.0f;
 
+    var card = removedCard.transform.GetComponent<Card>();
+
+    //removedCard.localPosition = 
+    Vector3 newPos = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f), cardZ);
+    displayCard.localPosition = Vector3.zero;
+    //removedCard.eulerAngles
+    Vector3 newRot = cardRotation;
+    removedCard.GetComponent<Button>().enabled = false;
+
+    card.SetPlayCardPositions(newPos, newRot);
     float currentCardZ = -0.01f;
 
     //Each existing card will be moved to their new positions
@@ -111,25 +129,7 @@ public class HandController : MonoBehaviour {
     cardCount = newCardCount;
   }
 
-  // //This occurs when a card is drawn or a card is played
-  // public void UpdateCardSpacing() {
 
-  //   cardCount = handLayout.childCount; //newest card count
-  //   float spacingIncrement = 0.0f;
-  //   float leftEdge = -(cardCount - 1) * 0.5f * cardWidth;
-
-  //   if (cardCount * cardWidth > handWidth) {
-  //     spacingIncrement = cardWidth - ((cardWidth * cardCount - handWidth) / cardCount);
-  //     leftEdge = -handWidth / 2.0f + cardWidth * 0.5f;
-  //   } else {
-  //     spacingIncrement = cardWidth;
-  //   }
-
-  //   foreach (Transform child in handLayout) {
-  //     child.GetComponent<Card>().SetCardPosition(leftEdge);
-  //     leftEdge += spacingIncrement;
-  //   }
-  // }
 
 }
 

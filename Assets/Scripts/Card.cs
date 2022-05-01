@@ -29,6 +29,20 @@ public class Card : MonoBehaviour {
   private CardGenerator.CardInfo card_info_;
 
   private float card_height_;
+  private bool is_card_back_ = false;
+
+  private bool is_played = false;
+
+  private Vector3 start_play_card_position_;
+  private Vector3 end_play_card_position_;
+
+  private Vector3 start_play_card_rotation_;
+  private Vector3 end_play_card_rotation_;
+
+  private Vector3 start_play_card_scale_;
+  private Vector3 end_play_card_scale_;
+
+  private float play_card_lerp = 0.0f;
 
   void Start() {
     SetToRandomCard();
@@ -47,6 +61,28 @@ public class Card : MonoBehaviour {
     HandleInitCardDraw();
     HandleCardSelection();
     HandleCardRearrange();
+    HandleCardPlay();
+  }
+
+  public enum CardPosition { FRONT, BACK };
+  public void FlipCard(CardPosition position) {
+    var img_dest = transform.Find("Display Image");
+    Debug.Assert(img_dest);
+
+    switch (position) {
+      case CardPosition.FRONT: {
+          if (!is_card_back_) return;
+          img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
+          is_card_back_ = false;
+          break;
+        }
+      case CardPosition.BACK: {
+          if (is_card_back_) return;
+          img_dest.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
+          is_card_back_ = true;
+          break;
+        }
+    }
   }
 
   public void SetHandController(HandController newController) {
@@ -62,22 +98,56 @@ public class Card : MonoBehaviour {
 
   private void SetToRandomCard() {
     card_info_ = CardGenerator.GetSingleton().GenerateRandomCard();
-    button = GetComponent<Button>();
-    // button.image.sprite = card_info_.cardSprite;
+
     var img_dest = transform.Find("Display Image");
     Debug.Assert(img_dest != null);
     Debug.Assert(img_dest.GetComponent<SpriteRenderer>() != null);
-    img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
+    // img_dest.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
+    // img_dest.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
   }
 
   public void PlayCard() {
     if (selecting_card_) {
+      is_played = true;
       handControl_.RemoveCard(transform);
     }
 
   }
 
+  public void SetPlayCardPositions(Vector3 newPosition, Vector3 newRotation){
+
+    start_play_card_position_ = transform.localPosition;
+    start_play_card_rotation_ = transform.eulerAngles;
+
+    end_play_card_position_ = newPosition;
+    end_play_card_rotation_ = newRotation;
+
+
+    start_play_card_scale_ = transform.localScale;
+    end_play_card_scale_ = Vector3.one;
+
+    play_card_lerp = 0.0f;
+
+  }
+
+  private void HandleCardPlay(){
+    if (!is_played) return;
+
+    if (play_card_lerp < 1.0f) {
+
+      transform.localPosition = Vector3.Lerp(start_play_card_position_, end_play_card_position_, play_card_lerp);
+      transform.eulerAngles = Vector3.Lerp(start_play_card_rotation_, end_play_card_rotation_, play_card_lerp);
+      transform.localScale = Vector3.Lerp(start_play_card_scale_, end_play_card_scale_, play_card_lerp);
+
+      play_card_lerp = Mathf.Clamp(play_card_lerp + draw_speed_ * Time.deltaTime, 0.0f, 1.0f);
+    }
+  
+
+  }
+
   private void HandleInitCardDraw() {
+    if (is_played) return;
+
     if (!start_draw_card_) return;
     if (start_draw_card_lerp_ == 0.0f) {
 
@@ -106,7 +176,7 @@ public class Card : MonoBehaviour {
   }
 
   private void HandleCardRearrange() {
-    if (start_card_rearrange_) {
+    if (start_card_rearrange_ && !is_played) {
 
       if (start_card_rearrange_lerp_ == 1.0f) {
         start_card_rearrange_ = false;
@@ -122,6 +192,8 @@ public class Card : MonoBehaviour {
   }
 
   private void HandleCardSelection() {
+    if (is_played) return;
+
     if (selecting_card_) {
       //if (select_lerp_ == 1.0f) return;
       if (start_draw_card_) { //if card draw was in process, complete that animation automatically
@@ -164,6 +236,7 @@ public class Card : MonoBehaviour {
       select_lerp_ = Mathf.Clamp(select_lerp_ - draw_speed_ * Time.deltaTime, 0.0f, 1.0f);
     }
   }
+
 
   private Vector3 CreateSelectedVectorPosition() {
     return new Vector3(
