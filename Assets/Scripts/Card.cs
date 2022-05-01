@@ -30,10 +30,24 @@ public class Card : MonoBehaviour {
 
   private float card_height_;
   private bool is_card_back_ = false;
+  
+  private bool is_played = false;
+
+  private Vector3 start_play_card_position_;
+  private Vector3 end_play_card_position_;
+
+  private Vector3 start_play_card_rotation_;
+  private Vector3 end_play_card_rotation_;
+
+  private Vector3 start_play_card_scale_;
+  private Vector3 end_play_card_scale_;
+
+  private float play_card_lerp = 0.0f;
 
   void Awake() {
     display_image_ = transform.Find("Display Image");
     Debug.Assert(display_image_ != null);
+
     SetToRandomCard();
   }
 
@@ -51,6 +65,7 @@ public class Card : MonoBehaviour {
     HandleInitCardDraw();
     HandleCardSelection();
     HandleCardRearrange();
+    HandleCardPlay();
   }
 
   public enum CardPosition { FRONT, BACK };
@@ -91,12 +106,46 @@ public class Card : MonoBehaviour {
 
   public void PlayCard() {
     if (selecting_card_) {
+      is_played = true;
       handControl_.RemoveCard(transform);
     }
 
   }
 
+  public void SetPlayCardPositions(Vector3 newPosition, Vector3 newRotation){
+
+    start_play_card_position_ = transform.localPosition;
+    start_play_card_rotation_ = transform.eulerAngles;
+
+    end_play_card_position_ = newPosition;
+    end_play_card_rotation_ = newRotation;
+
+
+    start_play_card_scale_ = transform.localScale;
+    end_play_card_scale_ = Vector3.one;
+
+    play_card_lerp = 0.0f;
+
+  }
+
+  private void HandleCardPlay(){
+    if (!is_played) return;
+
+    if (play_card_lerp < 1.0f) {
+
+      transform.localPosition = Vector3.Lerp(start_play_card_position_, end_play_card_position_, play_card_lerp);
+      transform.eulerAngles = Vector3.Lerp(start_play_card_rotation_, end_play_card_rotation_, play_card_lerp);
+      transform.localScale = Vector3.Lerp(start_play_card_scale_, end_play_card_scale_, play_card_lerp);
+
+      play_card_lerp = Mathf.Clamp(play_card_lerp + draw_speed_ * Time.deltaTime, 0.0f, 1.0f);
+    }
+  
+
+  }
+
   private void HandleInitCardDraw() {
+    if (is_played) return;
+
     if (!start_draw_card_) return;
     if (start_draw_card_lerp_ == 0.0f) {
 
@@ -125,7 +174,7 @@ public class Card : MonoBehaviour {
   }
 
   private void HandleCardRearrange() {
-    if (start_card_rearrange_) {
+    if (start_card_rearrange_ && !is_played) {
 
       if (start_card_rearrange_lerp_ == 1.0f) {
         start_card_rearrange_ = false;
@@ -141,6 +190,8 @@ public class Card : MonoBehaviour {
   }
 
   private void HandleCardSelection() {
+    if (is_played) return;
+
     if (selecting_card_) {
       //if (select_lerp_ == 1.0f) return;
       if (start_draw_card_) { //if card draw was in process, complete that animation automatically
@@ -184,6 +235,7 @@ public class Card : MonoBehaviour {
     }
   }
 
+
   private Vector3 CreateSelectedVectorPosition() {
     return new Vector3(
       transform.localPosition.x,
@@ -210,8 +262,13 @@ public class Card : MonoBehaviour {
     );
   }
 
-  public void SetCardPosition(float xPosition) {
+  public void SetCardPosition(float xPosition, float zPosition) {
     start_rearrange_position_x_ = transform.localPosition.x;
+
+    Vector3 localPos = transform.localPosition;
+    localPos.z = zPosition;
+    transform.localPosition = localPos;
+
     end_rearrange_position_x_ = xPosition;
     start_card_rearrange_ = true;
 

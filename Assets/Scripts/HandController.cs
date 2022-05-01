@@ -38,6 +38,8 @@ public class HandController : MonoBehaviour {
 
     float spacingIncrement = 0.0f;
     float leftEdge = -(newCardCount - 1) * 0.5f * cardWidth;
+
+    float currentCardZ = -0.01f;
     if (newCardCount * cardWidth > handWidth) {
       spacingIncrement = cardWidth - ((cardWidth * newCardCount - handWidth) / newCardCount);
 
@@ -48,15 +50,18 @@ public class HandController : MonoBehaviour {
 
     //Each existing card will be moved to their new positions
     foreach (Transform child in handLayout) {
-      child.GetComponent<Card>().SetCardPosition(leftEdge);
+      child.GetComponent<Card>().SetCardPosition(leftEdge, currentCardZ);
       leftEdge += spacingIncrement;
+
+      currentCardZ += -0.01f;
     }
 
     //Add the new card
     GameObject drawnCard = Instantiate(cardPrefab, handLayout);
-    drawnCard.transform.localPosition = new Vector3(leftEdge, -cardHeight * 1.5f, 0.0f);
+
+    drawnCard.transform.localPosition = new Vector3(leftEdge, -cardHeight * 1.5f, currentCardZ);
     var card = drawnCard.transform.GetComponent<Card>();
-    card.SetCardPosition(leftEdge);
+    card.SetCardPosition(leftEdge, currentCardZ);
     card.SetHandController(handLayout.GetComponent<HandController>());
     if (is_main_player_) card.FlipCard(Card.CardPosition.FRONT);
     else card.FlipCard(Card.CardPosition.BACK);
@@ -71,13 +76,6 @@ public class HandController : MonoBehaviour {
     is_main_player_ = false;
   }
 
-  public void PlayCard() {
-    if (selectedCard_ != null) {
-      Destroy(selectedCard_.gameObject); //hand is only tracked by the objects - will need to do more when we have more of a hand
-      selectedCard_ = null;
-      UpdateCardSpacing();
-    }
-  }
 
   public void RemoveCard(Transform removedCard) {
     //Calculate positions of current cards based on the new amount of cards
@@ -87,6 +85,7 @@ public class HandController : MonoBehaviour {
     float spacingIncrement = 0.0f;
 
     float leftEdge = -(newCardCount - 1) * 0.5f * cardWidth;
+
 
     if (newCardCount * cardWidth > handWidth) {
       spacingIncrement = cardWidth - ((cardWidth * newCardCount - handWidth) / newCardCount);
@@ -100,44 +99,37 @@ public class HandController : MonoBehaviour {
     Vector3 cardRotation = displayCard.eulerAngles;
     cardRotation.z += Random.Range(-45.0f, 45.0f);
 
-    displayCard.SetParent(playPile, false);
 
-    float cardZ = (float)-playPile.childCount;
-    displayCard.localPosition = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f), cardZ);
+    removedCard.SetParent(playPile, true);
+    //displayCard.SetParent(playPile, false);
 
-    displayCard.eulerAngles = cardRotation;
-    Destroy(removedCard.gameObject);
+    float cardZ = (float)-playPile.childCount - 1.0f;
+
+    var card = removedCard.transform.GetComponent<Card>();
+
+    //removedCard.localPosition = 
+    Vector3 newPos = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f), cardZ);
+    displayCard.localPosition = Vector3.zero;
+    //removedCard.eulerAngles
+    Vector3 newRot = cardRotation;
+    removedCard.GetComponent<Button>().enabled = false;
+
+    card.SetPlayCardPositions(newPos, newRot);
+    float currentCardZ = -0.01f;
 
     //Each existing card will be moved to their new positions
     foreach (Transform child in handLayout) {
       if (child != removedCard) {
-        child.GetComponent<Card>().SetCardPosition(leftEdge);
+        child.GetComponent<Card>().SetCardPosition(leftEdge, currentCardZ);
         leftEdge += spacingIncrement;
+        currentCardZ += -0.01f;
       }
     }
 
     cardCount = newCardCount;
   }
 
-  //This occurs when a card is drawn or a card is played
-  public void UpdateCardSpacing() {
 
-    cardCount = handLayout.childCount; //newest card count
-    float spacingIncrement = 0.0f;
-    float leftEdge = -(cardCount - 1) * 0.5f * cardWidth;
-
-    if (cardCount * cardWidth > handWidth) {
-      spacingIncrement = cardWidth - ((cardWidth * cardCount - handWidth) / cardCount);
-      leftEdge = -handWidth / 2.0f + cardWidth * 0.5f;
-    } else {
-      spacingIncrement = cardWidth;
-    }
-
-    foreach (Transform child in handLayout) {
-      child.GetComponent<Card>().SetCardPosition(leftEdge);
-      leftEdge += spacingIncrement;
-    }
-  }
 
 }
 

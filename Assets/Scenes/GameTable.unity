@@ -150,7 +150,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 38038652}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -200}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2004708203}
@@ -420,7 +420,7 @@ Canvas:
   serializedVersion: 3
   m_RenderMode: 1
   m_Camera: {fileID: 97939929}
-  m_PlaneDistance: 100
+  m_PlaneDistance: 10
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
   m_OverrideSorting: 0
@@ -515,7 +515,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5256817546741595928, guid: b59f34b98bbbb444c8b7534628e244d2, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -200
       objectReference: {fileID: 0}
     - target: {fileID: 5256817546741595928, guid: b59f34b98bbbb444c8b7534628e244d2, type: 3}
       propertyPath: m_LocalRotation.w
@@ -580,7 +580,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6913533735982836931, guid: fb9fdfd34d2b65d46bfdd599eebbceaf, type: 3}
       propertyPath: m_LocalScale.z
-      value: 3.1861095
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6913533735982836931, guid: fb9fdfd34d2b65d46bfdd599eebbceaf, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1005,7 +1005,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5256817546741595928, guid: b59f34b98bbbb444c8b7534628e244d2, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -200
       objectReference: {fileID: 0}
     - target: {fileID: 5256817546741595928, guid: b59f34b98bbbb444c8b7534628e244d2, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1077,7 +1077,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1963044567}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -200}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 913000170}
@@ -1276,6 +1276,10 @@ PrefabInstance:
     - target: {fileID: 4716738871319677808, guid: 4727b0a041cc53140824305ea177708e, type: 3}
       propertyPath: m_RootOrder
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4716738871319677808, guid: 4727b0a041cc53140824305ea177708e, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4716738871319677808, guid: 4727b0a041cc53140824305ea177708e, type: 3}
       propertyPath: m_LocalPosition.x
