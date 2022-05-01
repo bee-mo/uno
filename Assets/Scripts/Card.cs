@@ -30,7 +30,7 @@ public class Card : MonoBehaviour {
 
   private float card_height_;
   private bool is_card_back_ = false;
-  
+
   private bool is_played = false;
 
   private Vector3 start_play_card_position_;
@@ -48,7 +48,7 @@ public class Card : MonoBehaviour {
     display_image_ = transform.Find("Display Image");
     Debug.Assert(display_image_ != null);
 
-    SetToRandomCard();
+    SetToNextCardInDeck();
   }
 
   void Start() {
@@ -95,10 +95,13 @@ public class Card : MonoBehaviour {
     selecting_card_ = false;
   }
 
-  private void SetToRandomCard() {
-    card_info_ = CardGenerator.GetSingleton().GenerateRandomCard();
-    Debug.Assert(card_info_ != null);
-
+  private void SetToNextCardInDeck() {
+    // card_info_ = CardGenerator.GetSingleton().GenerateRandomCard();
+    card_info_ = CardGenerator.GetSingleton().GetNextCardFromDeck();
+    if (card_info_ == null) {
+      Debug.Log("No more cards in deck");
+      return;
+    }
     Debug.Assert(display_image_.GetComponent<SpriteRenderer>() != null);
     // display_image_.GetComponent<SpriteRenderer>().sprite = CardGenerator.GetSingleton().GetCardBackSprite();
     // display_image_.GetComponent<SpriteRenderer>().sprite = card_info_.cardSprite;
@@ -112,7 +115,7 @@ public class Card : MonoBehaviour {
 
   }
 
-  public void SetPlayCardPositions(Vector3 newPosition, Vector3 newRotation){
+  public void SetPlayCardPositions(Vector3 newPosition, Vector3 newRotation) {
 
     start_play_card_position_ = transform.localPosition;
     start_play_card_rotation_ = transform.eulerAngles;
@@ -128,7 +131,7 @@ public class Card : MonoBehaviour {
 
   }
 
-  private void HandleCardPlay(){
+  private void HandleCardPlay() {
     if (!is_played) return;
 
     if (play_card_lerp < 1.0f) {
@@ -139,7 +142,7 @@ public class Card : MonoBehaviour {
 
       play_card_lerp = Mathf.Clamp(play_card_lerp + draw_speed_ * Time.deltaTime, 0.0f, 1.0f);
     }
-  
+
 
   }
 

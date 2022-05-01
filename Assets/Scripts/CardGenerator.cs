@@ -37,14 +37,22 @@ public class CardGenerator : MonoBehaviour {
     }
   }; // end CardInfo
 
+  private List<CardInfo> unplayed_cards_;
   private Dictionary<CardType, Sprite> card_type_sprite_map_;
-  // CardGenerator() {
-  //   RegisterCardSprites();
-  // }
+  private GameDeck deck_;
 
   void Start() {
+    GameObject deck_go = GameObject.Find("GameDeck");
+    Debug.Assert(deck_go != null);
+    deck_ = deck_go.GetComponent<GameDeck>();
+    Debug.Assert(deck_);
+
     card_type_sprite_map_ = new Dictionary<CardType, Sprite>();
     RegisterCardSprites();
+
+    unplayed_cards_ = new List<CardInfo>();
+    InitializeUnplayedCards();
+    UpdateDeck();
   }
 
   static CardGenerator generator_ = null;
@@ -66,10 +74,30 @@ public class CardGenerator : MonoBehaviour {
     WILD_DRAW_4, BACKGROUND
   };
 
+  private void UpdateDeck() {
+    float fullness = unplayed_cards_.Count / 108.0f;
+    deck_.SetDeckFullness(fullness);
+  }
+
   public CardInfo GenerateRandomCard() {
     CardColor color = (CardColor)(int)Random.Range(0, 3);
     CardType type = (CardType)(int)Random.Range(0, 14);
     return new CardInfo(type, color);
+  }
+
+  public bool HasCardsLeft() {
+    return unplayed_cards_.Count > 0;
+  }
+
+  public CardInfo GetNextCardFromDeck() {
+    if (unplayed_cards_.Count == 0) return null;
+
+    int card_index = Random.Range(0, unplayed_cards_.Count - 1);
+    var card = unplayed_cards_[card_index];
+
+    unplayed_cards_.RemoveAt(card_index);
+    UpdateDeck();
+    return card;
   }
 
   public Sprite GetCardBackSprite() {
@@ -83,6 +111,43 @@ public class CardGenerator : MonoBehaviour {
     Texture2D tex = CloneTexture(img.sprite.texture);
     back_card_spite_ = Sprite.Create(tex, new Rect(0.0f, 0.0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
     return back_card_spite_;
+  }
+
+  private void InitializeUnplayedCards() {
+    unplayed_cards_.Clear();
+
+    // There are 8 of each number (1-9), 2 of each color
+    // There are only 4 zeroes tho.
+    for (int i = 0; i < 8; ++i) {
+      for (int j = 0; j <= 9; ++j) {
+        if (j == 0 && i >= 4) continue;
+        CardType type = (CardType)j;
+        CardColor color = (CardColor)(i % 4);
+        unplayed_cards_.Add(new CardInfo(type, color));
+      }
+    }
+
+    // 8 of each: skip, reverse, draw 2
+    // 2 of each color
+    List<CardType> g2 = new List<CardType>(){
+      CardType.SKIP, CardType.REVERSE, CardType.DRAW_2};
+    for (int i = 0; i < 8; ++i) {
+      foreach (var type in g2) {
+        CardColor color = (CardColor)(i % 4);
+        unplayed_cards_.Add(new CardInfo(type, color));
+      }
+    }
+
+    // 4 wild, and 4 wild + draw 4
+    List<CardType> g3 = new List<CardType>(){
+      CardType.WILD, CardType.WILD_DRAW_4};
+    for (int i = 0; i < 4; ++i) {
+      CardColor color = (CardColor)i;
+      foreach (var type in g3) {
+        unplayed_cards_.Add(new CardInfo(type, color));
+      }
+    }
+    Debug.Assert(unplayed_cards_.Count == 108);
   }
 
   private void RegisterCardSprites() {
