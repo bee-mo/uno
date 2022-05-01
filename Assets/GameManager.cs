@@ -29,6 +29,10 @@ public class GameManager : MonoBehaviour {
   }
 
   public void DrawMainPlayerCard() {
+    if (!CardGenerator.GetSingleton().HasCardsLeft()) {
+      Debug.Log("No more cards to play");
+    }
+
     GameObject main_go = player_hands_[main_player_id_];
     Debug.Assert(main_go);
     Debug.Assert(table_deck_);
@@ -41,6 +45,10 @@ public class GameManager : MonoBehaviour {
   }
 
   public void DrawEnemyPlayerCard() {
+    if (!CardGenerator.GetSingleton().HasCardsLeft()) {
+      Debug.Log("No more cards to play");
+    }
+
     GameObject enemy_go = player_hands_[enemy_player_id_];
     Debug.Assert(enemy_go);
     Debug.Assert(table_deck_);
