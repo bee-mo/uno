@@ -66,7 +66,8 @@ public class GameDeck : MonoBehaviour {
         best_fullness = entry.Key;
       }
     }
-    Debug.Assert(selected_sprite != null);
+    if (selected_sprite == null) return;
+
     fullness_ = best_fullness;
     renderer_.sprite = selected_sprite;
   }
