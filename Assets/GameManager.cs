@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour {
   // Store the player id and their associated hands' game objects
   private Dictionary<int, GameObject> player_hands_;
   private GameObject table_deck_;
+  private GameObject play_pile_;
 
   // placeholder ids
   private int main_player_id_ = 0;
@@ -20,7 +21,11 @@ public class GameManager : MonoBehaviour {
     CreateEnemyPlayer(enemy_player_id_);
 
     table_deck_ = GameObject.Find("GameDeck");
+    play_pile_ = GameObject.Find("PlayPile");
     Debug.Assert(table_deck_);
+
+    play_pile_.GetComponent<PlayPile>().DrawFromDeck();
+
   }
 
   // Update is called once per frame

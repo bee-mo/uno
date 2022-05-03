@@ -181,4 +181,9 @@ public class GameDeck : MonoBehaviour {
       drawable_card_.transform.position.z
     );
   }
+
+  public float GetDeckOffset(){
+    return (kDeckThickness * fullness_);
+  }
+
 }

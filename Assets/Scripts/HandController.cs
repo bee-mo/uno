@@ -77,8 +77,17 @@ public class HandController : MonoBehaviour {
   }
 
 
-  public void RemoveCard(Transform removedCard) {
+  public bool RemoveCard(Transform removedCard) {
     //Calculate positions of current cards based on the new amount of cards
+
+    var card = removedCard.transform.GetComponent<Card>();
+    var playPileComponent = playPile.GetComponent<PlayPile>();
+
+    //check if playing card is valid
+    if (!CheckCardPlayValid(playPileComponent.GetTopCard().GetCardInfo(), card.GetCardInfo() )) return false;
+
+    
+
     int newCardCount = handLayout.childCount - 1; //newest card count
 
 
@@ -101,11 +110,14 @@ public class HandController : MonoBehaviour {
 
 
     removedCard.SetParent(playPile, true);
+
+    playPileComponent.SetTopCard(card);
+
     //displayCard.SetParent(playPile, false);
 
     float cardZ = (float)-playPile.childCount - 1.0f;
 
-    var card = removedCard.transform.GetComponent<Card>();
+    
 
     //removedCard.localPosition = 
     Vector3 newPos = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f), cardZ);
@@ -127,8 +139,22 @@ public class HandController : MonoBehaviour {
     }
 
     cardCount = newCardCount;
+
+    return true;
+
   }
 
+
+  public bool CheckCardPlayValid(CardGenerator.CardInfo topCard, CardGenerator.CardInfo checkCard){
+
+    if (checkCard.cardType.ToString() == "WILD_DRAW_4" || checkCard.cardType.ToString() == "WILD") return true;
+
+    if (checkCard.cardColor == topCard.cardColor) return true;
+    if (checkCard.cardType == topCard.cardType) return true;
+
+    return false;
+
+  }
 
 
 }
