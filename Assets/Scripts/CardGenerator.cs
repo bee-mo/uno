@@ -16,6 +16,7 @@ public class CardGenerator : MonoBehaviour {
     }
     public CardColor cardColor {
       get { return color_; }
+      set { color_ = value; }
     }
 
     public Sprite cardSprite {

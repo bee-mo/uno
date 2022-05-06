@@ -1,14 +1,20 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class PlayPile : MonoBehaviour
 {
     private Card topCard; //the card that is checked against for valid plays
     public GameObject cardPrefab;
 
-    void Start(){
+    private Transform cardColorText;   
+    private GameObject colorSelectionBox;
 
+    void Awake(){
+        cardColorText = GameObject.Find("Card Color Text").transform;
+        colorSelectionBox = GameObject.Find("Color Selection");
+        colorSelectionBox.SetActive(false);
     }
 
 
@@ -35,15 +41,37 @@ public class PlayPile : MonoBehaviour
         card.SetPlayCardPositions(newPos, newRot);
         card.SetPlayCard(true);
         card.FlipCard(Card.CardPosition.FRONT);
-        topCard = card;
+        SetTopCard(card);
         
     }
 
     public void SetTopCard(Card newCard){
         topCard = newCard;
+
+        CardGenerator.CardInfo newInfo = newCard.GetCardInfo();
+        if (newInfo.cardType.ToString() != "WILD_DRAW_4" && newInfo.cardType.ToString() != "WILD"){
+            //cardColorText = GameObject.Find("Card Color Text").transform;
+            TMP_Text currentColorText = cardColorText.GetComponent<TMP_Text>();
+            currentColorText.text = newInfo.cardColor.ToString();
+        } else {
+            colorSelectionBox.SetActive(true);
+        }
     }
 
     public Card GetTopCard(){
         return topCard;
     }
+
+    public void SetColor(int newColor){
+
+        CardGenerator.CardColor colorToSet = (CardGenerator.CardColor)newColor;
+
+        topCard.GetCardInfo().cardColor = colorToSet;
+
+        TMP_Text currentColorText = cardColorText.GetComponent<TMP_Text>();
+        currentColorText.text = topCard.GetCardInfo().cardColor.ToString();
+        colorSelectionBox.SetActive(false);
+
+    }
+
 }

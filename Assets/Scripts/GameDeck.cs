@@ -186,4 +186,8 @@ public class GameDeck : MonoBehaviour {
     return (kDeckThickness * fullness_);
   }
 
+  public bool CheckCardDrawInProgess(){
+    return card_draw_in_progress_;
+  }
+
 }

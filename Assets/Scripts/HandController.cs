@@ -16,8 +16,14 @@ public class HandController : MonoBehaviour {
 
   private Transform playPile;
 
+  private GameManager gameManager;
+  private int playerID;
 
   // Start is called before the first frame update
+  void Awake(){
+
+  }
+
   void Start() {
     handLayout = transform;
 
@@ -26,6 +32,8 @@ public class HandController : MonoBehaviour {
     cardHeight = cardPrefab.transform.GetComponent<RectTransform>().rect.height;
     handWidth = maxHandWidth * cardWidth;
     playPile = GameObject.Find("PlayPile").transform;
+
+    gameManager = GameObject.Find("Game Manager").transform.GetComponent<GameManager>();
   }
 
   // Update is called once per frame
@@ -76,6 +84,9 @@ public class HandController : MonoBehaviour {
     is_main_player_ = false;
   }
 
+  public bool IsMainPlayer(){
+    return is_main_player_;
+  }
 
   public bool RemoveCard(Transform removedCard) {
     //Calculate positions of current cards based on the new amount of cards
@@ -86,7 +97,7 @@ public class HandController : MonoBehaviour {
     //check if playing card is valid
     if (!CheckCardPlayValid(playPileComponent.GetTopCard().GetCardInfo(), card.GetCardInfo() )) return false;
 
-    
+    if (playerID != gameManager.GetActivePlayerID()) return false;
 
     int newCardCount = handLayout.childCount - 1; //newest card count
 
@@ -113,16 +124,12 @@ public class HandController : MonoBehaviour {
 
     playPileComponent.SetTopCard(card);
 
-    //displayCard.SetParent(playPile, false);
 
     float cardZ = (float)-playPile.childCount - 1.0f;
 
-    
 
-    //removedCard.localPosition = 
     Vector3 newPos = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f), cardZ);
     displayCard.localPosition = Vector3.zero;
-    //removedCard.eulerAngles
     Vector3 newRot = cardRotation;
     removedCard.GetComponent<Button>().enabled = false;
 
@@ -140,6 +147,18 @@ public class HandController : MonoBehaviour {
 
     cardCount = newCardCount;
 
+    CardGenerator.CardInfo playedCardInfo = card.GetCardInfo();
+
+    if (playedCardInfo.cardType.ToString() == "SKIP"){
+      gameManager.NextActivePlayer();
+    } else if (playedCardInfo.cardType.ToString() == "REVERSE"){
+      gameManager.ReverseDirection();
+    } else if (playedCardInfo.cardType.ToString() == "DRAW_2"){
+      gameManager.ForceDraw(2, gameManager.GetNextActivePlayer());
+    } else if (playedCardInfo.cardType.ToString() == "WILD_DRAW_4"){
+      gameManager.ForceDraw(4, gameManager.GetNextActivePlayer());
+    }
+    gameManager.NextActivePlayer();
     return true;
 
   }
@@ -156,6 +175,13 @@ public class HandController : MonoBehaviour {
 
   }
 
+  public void SetPlayerID(int id){
+    playerID = id;
+  }
+
+  public int GetCardCount(){
+    return (int)cardCount;
+  }
 
 }
 
