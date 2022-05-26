@@ -17,6 +17,8 @@ public class GameManager : MonoBehaviour {
 
   private GameObject play_pile_;
 
+  private GameObject restart_button_;
+
   private GameObject enemy_row_;
   private Dictionary<int, int> enemy_id_to_index_;
   private int active_enemy_ = -1;
@@ -39,40 +41,9 @@ public class GameManager : MonoBehaviour {
   private int cardsToDraw = 0;
   private int drawingPlayer = -1;
 
-  public void NextActivePlayer(){
-    active_player_ = GetNextActivePlayer();//mod ((active_player_ + direction_), (player_hands_.Count));
+  private Button player_draw_button_;
+  private Button enemy_draw_button_;
 
-
-    active_player_text_.text = "Active Player ID: " + player_hands_.Keys.ToArray()[active_player_].ToString();
-    if (active_player_ != main_player_id_){ //show the hand
-      SetActiveEnemy(active_player_);
-    }
-
-  }
-
-  public int GetNextActivePlayer(){
-    return mod((active_player_ + direction_), (player_hands_.Count));
-  }
-  int mod(int x, int m) {
-    return (x%m + m)%m;
-  }
-
-  public void ReverseDirection(){
-    direction_ = -direction_;
-  }
-
-  public int GetActivePlayerID(){
-    return player_hands_.Keys.ToArray()[active_player_];
-  }
-
-  public void ForceDraw(int count, int targetHand){
-    cardsToDraw = count;
-
-    drawingPlayer = targetHand;
-    if (targetHand != main_player_id_){ //show the hand
-      SetActiveEnemy(targetHand);
-    }
-  }
 
   // Start is called before the first frame update
   void Start() {
@@ -88,17 +59,21 @@ public class GameManager : MonoBehaviour {
 
     table_deck_ = GameObject.Find("GameDeck");
     play_pile_ = GameObject.Find("PlayPile");
+    restart_button_ = GameObject.Find("Restart Button");
     Debug.Assert(table_deck_);
 
     active_enemy_text_ = GameObject.Find("Active Enemy Text").transform.GetComponent<TMP_Text>();
     active_player_text_ = GameObject.Find("Active Player Text").transform.GetComponent<TMP_Text>();
-    play_pile_.GetComponent<PlayPile>().DrawFromDeck();
+    //play_pile_.GetComponent<PlayPile>().DrawFromDeck();
+
+    player_draw_button_ = GameObject.Find("Draw Card").transform.GetComponent<Button>();
+    enemy_draw_button_ = GameObject.Find("Enemy Draw Card").transform.GetComponent<Button>();
 
 
     CreateMainPlayer(main_player_id_);
 
 
-    int enemy_count = 5;
+    int enemy_count = 3;
     for (int i = 1; i <= enemy_count; ++i) {
       if (active_enemy_ == -1) active_enemy_ = i;
       CreateEnemyPlayer(i);
@@ -107,6 +82,7 @@ public class GameManager : MonoBehaviour {
     active_player_text_.text =  "Active Player ID: " + player_hands_.Keys.ToArray()[active_player_].ToString();
 
     UpdatePlayerCountInfo();
+    ResetGame();
   }
 
   // Update is called once per frame
@@ -115,9 +91,9 @@ public class GameManager : MonoBehaviour {
     if (initial_draw_){
 
       if (player_hands_[main_player_id_].GetComponent<HandController>().GetCardCount() < initial_hand_size_){
-        DrawMainPlayerCard();
+        DrawMainPlayerCard(false);
       } else if (player_hands_[active_enemy_].GetComponent<HandController>().GetCardCount() < initial_hand_size_){
-        DrawEnemyPlayerCard();
+        DrawEnemyPlayerCard(false);
       } else {
         NextEnemy();
         if (player_hands_[active_enemy_].GetComponent<HandController>().GetCardCount() >= initial_hand_size_) initial_draw_ = false;
@@ -168,7 +144,7 @@ public class GameManager : MonoBehaviour {
     
   }
 
-  public void DrawMainPlayerCard() {
+  public void DrawMainPlayerCard(bool playable) {
     if (!CardGenerator.GetSingleton().HasCardsLeft()) {
       Debug.Log("No more cards to play");
     }
@@ -182,18 +158,25 @@ public class GameManager : MonoBehaviour {
     Debug.Assert(hand);
 
     if (player_hands_.Keys.ToArray()[active_player_] == main_player_id_ || initial_draw_){
+      if (playable){
+        hand.NextCardPlayable();
+        SetDrawButtons(false);
+      }
 
       deck.DrawMainPlayerCard(hand);
 
-      if (!initial_draw_) NextActivePlayer();
-    
+
+
+      //if (!initial_draw_) NextActivePlayer();
+
+
   } else {
       Debug.Log("Not your turn");
     }
 
   }
 
-  public void DrawEnemyPlayerCard() {
+  public void DrawEnemyPlayerCard(bool playable) {
     if (!CardGenerator.GetSingleton().HasCardsLeft()) {
       Debug.Log("No more cards to play");
     }
@@ -208,8 +191,15 @@ public class GameManager : MonoBehaviour {
 
 
     if (player_hands_.Keys.ToArray()[active_player_] == active_enemy_ || initial_draw_){
+      
+      if (playable){
+        hand.NextCardPlayable();
+        SetDrawButtons(false);
+      }
       deck.DrawEnemyPlayerCard(hand);
-      if (!initial_draw_) NextActivePlayer();
+      
+      //if (!initial_draw_) NextActivePlayer();
+
     } else {
       Debug.Log("Not the active player's turn");
     }
@@ -286,4 +276,87 @@ public class GameManager : MonoBehaviour {
     Debug.Assert(manager);
     return manager;
   }
+
+  public void NextActivePlayer(){
+    active_player_ = GetNextActivePlayer();//mod ((active_player_ + direction_), (player_hands_.Count));
+
+
+    active_player_text_.text = "Active Player ID: " + player_hands_.Keys.ToArray()[active_player_].ToString();
+    if (active_player_ != main_player_id_){ //show the hand
+      SetActiveEnemy(active_player_);
+    }
+
+    SetDrawButtons(true);
+
+  }
+
+  public int GetNextActivePlayer(){
+    return mod((active_player_ + direction_), (player_hands_.Count));
+  }
+  int mod(int x, int m) {
+    return (x%m + m)%m;
+  }
+
+  public void ReverseDirection(){
+    direction_ = -direction_;
+  }
+
+  public int GetActivePlayerID(){
+    return player_hands_.Keys.ToArray()[active_player_];
+  }
+
+  public void ForceDraw(int count, int targetHand){
+    cardsToDraw = count;
+
+    drawingPlayer = targetHand;
+    if (targetHand != main_player_id_){ //show the hand
+      SetActiveEnemy(targetHand);
+    }
+  }
+
+  public void ResetGame(){
+
+
+    CardGenerator.GetSingleton().ResetDeck(); 
+    PlayPile playPileComponent = play_pile_.GetComponent<PlayPile>();
+
+    playPileComponent.ResetPlayPile();
+    playPileComponent.ResetTopCard();
+    playPileComponent.DrawFromDeck();
+
+    for (int i = 0; i < player_hands_.Count; i++){
+      player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().ClearHand();
+  
+    }
+
+    initial_draw_ = true;
+    direction_ = 1;
+    active_player_ = 0;
+    active_enemy_ = 1;
+
+    SetRestartButton(false);
+
+
+  }
+
+  public void SetRestartButton(bool val){
+    restart_button_.SetActive(val);
+  }
+
+  public void PassActivePlayerAction(){
+    GameObject hand_go = player_hands_[active_player_];
+    HandController hand = hand_go.GetComponent<HandController>();
+
+    hand.PassAction();
+
+    NextActivePlayer();
+  }
+
+  private void SetDrawButtons(bool val){
+
+    player_draw_button_.interactable = val;
+    enemy_draw_button_.interactable = val;
+
+  }
+
 }

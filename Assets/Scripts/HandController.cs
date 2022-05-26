@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class HandController : MonoBehaviour {
   private Transform handLayout;
+  private GameObject cardParent;
   private float cardCount;
   private const float maxHandWidth = 6.0f; //the max number of cards before we start overlapping cards
   private float cardWidth;
@@ -18,6 +19,13 @@ public class HandController : MonoBehaviour {
 
   private GameManager gameManager;
   private int playerID;
+  
+  //if the next card drawn will be playable instantly
+  private bool next_card_playable_ = false; 
+  private bool next_card_playable_only_ = false;
+
+  private Card playable_drawn_card_;
+
 
   // Start is called before the first frame update
   void Awake(){
@@ -34,15 +42,18 @@ public class HandController : MonoBehaviour {
     playPile = GameObject.Find("PlayPile").transform;
 
     gameManager = GameObject.Find("Game Manager").transform.GetComponent<GameManager>();
+
+    cardParent = new GameObject("Card Parent");
+    cardParent.transform.SetParent(handLayout, false); 
   }
 
   // Update is called once per frame
   void Update() { }
 
-  //currently only draws cards visually
+
   public void DrawCard() {
     //Calculate positions of current cards based on the new amount of cards
-    int newCardCount = handLayout.childCount + 1; //newest card count
+    int newCardCount = cardParent.transform.childCount + 1; //newest card count
 
     float spacingIncrement = 0.0f;
     float leftEdge = -(newCardCount - 1) * 0.5f * cardWidth;
@@ -57,7 +68,7 @@ public class HandController : MonoBehaviour {
     }
 
     //Each existing card will be moved to their new positions
-    foreach (Transform child in handLayout) {
+    foreach (Transform child in cardParent.transform) {
       child.GetComponent<Card>().SetCardPosition(leftEdge, currentCardZ);
       leftEdge += spacingIncrement;
 
@@ -65,13 +76,23 @@ public class HandController : MonoBehaviour {
     }
 
     //Add the new card
-    GameObject drawnCard = Instantiate(cardPrefab, handLayout);
+    GameObject drawnCard = Instantiate(cardPrefab, cardParent.transform);
+
+
 
     drawnCard.transform.localPosition = new Vector3(leftEdge, -cardHeight * 1.5f, currentCardZ);
     var card = drawnCard.transform.GetComponent<Card>();
     card.SetCardPosition(leftEdge, currentCardZ);
     card.SetHandController(handLayout.GetComponent<HandController>());
-    if (is_main_player_) card.FlipCard(Card.CardPosition.FRONT);
+    
+    if (next_card_playable_){ 
+      card.SetCardDrawnPlayable(true);
+      next_card_playable_ = false;
+      next_card_playable_only_ = true;
+      playable_drawn_card_ = card;
+    }
+
+    if (is_main_player_ || true) card.FlipCard(Card.CardPosition.FRONT);
     else card.FlipCard(Card.CardPosition.BACK);
     cardCount = newCardCount;
   }
@@ -94,13 +115,27 @@ public class HandController : MonoBehaviour {
     var card = removedCard.transform.GetComponent<Card>();
     var playPileComponent = playPile.GetComponent<PlayPile>();
 
+
+    if (next_card_playable_only_ && !card.GetCardDrawnPlayable() ) return false;
+
+
     //check if playing card is valid
     if (!CheckCardPlayValid(playPileComponent.GetTopCard().GetCardInfo(), card.GetCardInfo() )) return false;
 
     if (playerID != gameManager.GetActivePlayerID()) return false;
 
-    int newCardCount = handLayout.childCount - 1; //newest card count
+    //card play is valid, set next_card variables off
+    if (next_card_playable_only_ ){
+      next_card_playable_ = false;
+      next_card_playable_only_ = false;
+    }
 
+    int newCardCount = cardParent.transform.childCount - 1; //newest card count
+
+    if (newCardCount <= 0){
+      gameManager.SetRestartButton(true);
+      Debug.Log("winner");
+    }
 
     float spacingIncrement = 0.0f;
 
@@ -120,12 +155,12 @@ public class HandController : MonoBehaviour {
     cardRotation.z += Random.Range(-45.0f, 45.0f);
 
 
-    removedCard.SetParent(playPile, true);
+//    removedCard.SetParent(playPile, true);
 
     playPileComponent.SetTopCard(card);
 
 
-    float cardZ = (float)-playPile.childCount - 1.0f;
+    float cardZ = (float)-playPileComponent.GetPlayPileCardCount()*0.01f - 1.0f;
 
 
     Vector3 newPos = new Vector3(Random.Range(-0.1f, 0.1f), Random.Range(-0.1f, 0.1f), cardZ);
@@ -137,7 +172,7 @@ public class HandController : MonoBehaviour {
     float currentCardZ = -0.01f;
 
     //Each existing card will be moved to their new positions
-    foreach (Transform child in handLayout) {
+    foreach (Transform child in cardParent.transform) {
       if (child != removedCard) {
         child.GetComponent<Card>().SetCardPosition(leftEdge, currentCardZ);
         leftEdge += spacingIncrement;
@@ -181,6 +216,28 @@ public class HandController : MonoBehaviour {
 
   public int GetCardCount(){
     return (int)cardCount;
+  }
+
+  public void ClearHand(){
+    handLayout = transform;
+    Destroy(cardParent);
+    cardParent = new GameObject("Card Parent");
+    cardParent.transform.SetParent(handLayout, false); 
+    cardCount = 0;
+  }
+
+  public void NextCardPlayable(){
+    next_card_playable_ = true;
+  }
+
+  public void PassAction(){
+    next_card_playable_ = false;
+    next_card_playable_only_ = false;
+
+    if (playable_drawn_card_ != null){
+      playable_drawn_card_.SetCardDrawnPlayable(false);
+      playable_drawn_card_ = null;
+    }
   }
 
 }

@@ -11,10 +11,23 @@ public class PlayPile : MonoBehaviour
     private Transform cardColorText;   
     private GameObject colorSelectionBox;
 
+    //A list of cards that have been played (excluding the top card)
+    private List<CardGenerator.CardInfo> played_cards_; 
+
+    private GameObject cardPileParent;
+    private GameObject topCardGO;
+
     void Awake(){
         cardColorText = GameObject.Find("Card Color Text").transform;
         colorSelectionBox = GameObject.Find("Color Selection");
         colorSelectionBox.SetActive(false);
+        played_cards_ = new List<CardGenerator.CardInfo>();
+
+        cardPileParent = new GameObject("Card Pile Parent");
+        cardPileParent.transform.SetParent(transform, false); 
+
+        topCardGO = new GameObject("Top Card");
+        topCardGO.transform.SetParent(transform, false);
     }
 
 
@@ -46,6 +59,13 @@ public class PlayPile : MonoBehaviour
     }
 
     public void SetTopCard(Card newCard){
+        newCard.transform.SetParent(topCardGO.transform, true);
+        if (topCard != null){
+            CardGenerator.CardInfo previousInfo = topCard.GetCardInfo();
+            played_cards_.Add(new CardGenerator.CardInfo(previousInfo.cardType, previousInfo.cardColor));
+            topCard.transform.SetParent(cardPileParent.transform, true);
+        }
+
         topCard = newCard;
 
         CardGenerator.CardInfo newInfo = newCard.GetCardInfo();
@@ -56,6 +76,9 @@ public class PlayPile : MonoBehaviour
         } else {
             colorSelectionBox.SetActive(true);
         }
+
+        
+
     }
 
     public Card GetTopCard(){
@@ -73,5 +96,38 @@ public class PlayPile : MonoBehaviour
         colorSelectionBox.SetActive(false);
 
     }
+
+    public List<CardGenerator.CardInfo> GetPlayedCards(){
+        return played_cards_;
+    }
+
+    public void ResetPlayPile(){
+        played_cards_ = new List<CardGenerator.CardInfo>();
+
+        if (topCard != null){
+            Vector3 topOriginalPosition = topCard.transform.localPosition;
+            topOriginalPosition.z = -1.0f;
+            topCard.transform.localPosition = topOriginalPosition;
+        }
+        
+        Destroy(cardPileParent);
+        cardPileParent = new GameObject("Card Pile Parent");
+        cardPileParent.transform.SetParent(transform, false); 
+
+
+    }
+
+    public void ResetTopCard(){
+        topCard = null;
+        Destroy(topCardGO);
+        topCardGO = new GameObject("Top Card");
+        topCardGO.transform.SetParent(transform, false);
+
+    }
+
+    public int GetPlayPileCardCount(){
+        return cardPileParent.transform.childCount + 1; //add one for the top card
+    }
+
 
 }

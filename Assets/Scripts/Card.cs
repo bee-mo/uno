@@ -45,6 +45,8 @@ public class Card : MonoBehaviour {
   private float play_card_lerp = 0.0f;
   private bool play_card_complete = false;
 
+  private bool card_drawn_playable_ = false; //by default, a card cannot be played after a draw action
+
   void Awake() {
     display_image_ = transform.Find("Display Image");
     Debug.Assert(display_image_ != null);
@@ -300,4 +302,13 @@ public class Card : MonoBehaviour {
   public CardGenerator.CardInfo GetCardInfo(){
     return card_info_;
   }
+
+  public void SetCardDrawnPlayable(bool val){
+    card_drawn_playable_ = val;
+  }
+
+  public bool GetCardDrawnPlayable(){
+    return card_drawn_playable_;
+  }
+
 }
