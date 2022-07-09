@@ -27,6 +27,13 @@ public class HandController : MonoBehaviour {
   private Card playable_drawn_card_;
 
 
+  private Transform uno_button_;
+  private Transform catch_button_;
+
+  private Transform challenge_button_;
+  private Transform decline_button_;
+
+
   // Start is called before the first frame update
   void Awake(){
 
@@ -43,8 +50,13 @@ public class HandController : MonoBehaviour {
 
     gameManager = GameObject.Find("Game Manager").transform.GetComponent<GameManager>();
 
-    cardParent = new GameObject("Card Parent");
-    cardParent.transform.SetParent(handLayout, false); 
+    cardParent = transform.Find("Card Parent").gameObject;//new GameObject("Card Parent");
+    //cardParent.transform.SetParent(handLayout, false); 
+
+    uno_button_ = transform.Find("Uno Button");
+    catch_button_ = transform.Find("Catch Button");
+    challenge_button_ = transform.Find("Challenge Button");
+    decline_button_ = transform.Find("Decline Button");
   }
 
   // Update is called once per frame
@@ -85,16 +97,24 @@ public class HandController : MonoBehaviour {
     card.SetCardPosition(leftEdge, currentCardZ);
     card.SetHandController(handLayout.GetComponent<HandController>());
     
+    cardCount = newCardCount;
+
+
+
     if (next_card_playable_){ 
       card.SetCardDrawnPlayable(true);
       next_card_playable_ = false;
       next_card_playable_only_ = true;
       playable_drawn_card_ = card;
+      gameManager.SetUnoElements();
     }
 
-    if (is_main_player_ || true) card.FlipCard(Card.CardPosition.FRONT);
+    if (is_main_player_ || gameManager.show_hands_) card.FlipCard(Card.CardPosition.FRONT);
     else card.FlipCard(Card.CardPosition.BACK);
-    cardCount = newCardCount;
+
+
+    
+
   }
 
   public void SetAsMainPlayer() {
@@ -116,19 +136,22 @@ public class HandController : MonoBehaviour {
     var playPileComponent = playPile.GetComponent<PlayPile>();
 
 
+    //Checks if only the drawn card is the playable card and checks if the selected card is also set as a drawn playable card
     if (next_card_playable_only_ && !card.GetCardDrawnPlayable() ) return false;
 
 
     //check if playing card is valid
     if (!CheckCardPlayValid(playPileComponent.GetTopCard().GetCardInfo(), card.GetCardInfo() )) return false;
 
-    if (playerID != gameManager.GetActivePlayerID()) return false;
+    if (playerID != gameManager.GetActivePlayerID() || gameManager.ChallengeActive()) return false;
 
     //card play is valid, set next_card variables off
     if (next_card_playable_only_ ){
       next_card_playable_ = false;
       next_card_playable_only_ = false;
     }
+
+    Card topCard = playPileComponent.GetTopCard();
 
     int newCardCount = cardParent.transform.childCount - 1; //newest card count
 
@@ -191,9 +214,20 @@ public class HandController : MonoBehaviour {
     } else if (playedCardInfo.cardType.ToString() == "DRAW_2"){
       gameManager.ForceDraw(2, gameManager.GetNextActivePlayer());
     } else if (playedCardInfo.cardType.ToString() == "WILD_DRAW_4"){
-      gameManager.ForceDraw(4, gameManager.GetNextActivePlayer());
+
+      //play pile handles color selection
+      //Challenge event occurs (challenge events will record the participating players)
+      // the challenge event will handle the drawing
+      //Next we proceed as usual, but while challenge event is active thing will work differently
+      //Set uno elements will still work for setting up catches, but will not a set up a prep.
+      //Once challenge event resolves, we set next active player (the skip) and set uno elements
+      //This set up will only be for prep as a prep is not set up so no new catch will be possible here 
+      //gameManager.ForceDraw(4, gameManager.GetNextActivePlayer());
+
+      gameManager.StartChallenge(playerID, gameManager.GetNextActivePlayer(), topCard);
     }
     gameManager.NextActivePlayer();
+    gameManager.SetUnoElements();
     return true;
 
   }
@@ -209,6 +243,60 @@ public class HandController : MonoBehaviour {
     return false;
 
   }
+  public bool CheckMatchingColor(CardGenerator.CardInfo topCard, CardGenerator.CardInfo checkCard){
+
+    if (checkCard.cardType.ToString() == "WILD_DRAW_4" || checkCard.cardType.ToString() == "WILD") return false;
+
+    if (checkCard.cardColor == topCard.cardColor) return true;
+
+    return false;
+
+  }
+
+
+  public bool HandHasPlayable(){
+
+    bool playable = false;
+    var playPileComponent = playPile.GetComponent<PlayPile>();
+    foreach (Transform child in cardParent.transform) {
+        var card = child.GetComponent<Card>();
+
+        //if we are in a state where only drawn card is playable, then card is automatically invalid
+        if (next_card_playable_only_ && !card.GetCardDrawnPlayable() ) continue;
+
+        if (CheckCardPlayValid(playPileComponent.GetTopCard().GetCardInfo(), card.GetCardInfo() ))
+        {
+          playable = true;
+        }
+
+    }
+
+    return playable;
+
+
+  }
+
+
+  public bool HandHasMatchingColor(Card topCard ){
+
+    bool matchingColor = false;
+
+    foreach (Transform child in cardParent.transform) {
+        var card = child.GetComponent<Card>();
+
+        //if we are in a state where only drawn card is playable, then card is automatically invalid
+        if (next_card_playable_only_ && !card.GetCardDrawnPlayable() ) continue;
+
+        if (CheckMatchingColor(topCard.GetCardInfo(), card.GetCardInfo() ))
+        {
+          matchingColor = true;
+        }
+
+    }
+
+    return matchingColor;
+
+  }
 
   public void SetPlayerID(int id){
     playerID = id;
@@ -220,9 +308,19 @@ public class HandController : MonoBehaviour {
 
   public void ClearHand(){
     handLayout = transform;
-    Destroy(cardParent);
-    cardParent = new GameObject("Card Parent");
-    cardParent.transform.SetParent(handLayout, false); 
+    
+    if (cardParent == null){
+      cardParent = transform.Find("Card Parent").gameObject;
+      //cardParent = new GameObject("Card Parent");
+      //cardParent.transform.SetParent(handLayout, false); 
+    }
+
+    foreach (Transform child in cardParent.transform){
+      if (child != null) GameObject.Destroy(child.gameObject);
+    }
+
+    //cardParent = new GameObject("Card Parent");
+    //cardParent.transform.SetParent(handLayout, false); 
     cardCount = 0;
   }
 
@@ -239,6 +337,41 @@ public class HandController : MonoBehaviour {
       playable_drawn_card_ = null;
     }
   }
+
+  public void SetUnoButton(bool val){
+    uno_button_.gameObject.SetActive(val);
+  }
+
+
+  public void SetCatchButton(bool val){
+    catch_button_.gameObject.SetActive(val);
+  }
+
+  public void SetChallengeButtons(bool val){
+    challenge_button_.gameObject.SetActive(val);
+    decline_button_.gameObject.SetActive(val);
+  }
+
+
+
+
+
+  public void CallUno(){
+    gameManager.CallUno(playerID);
+  }
+
+  public void CatchPlayer(){
+    gameManager.CatchPlayer(playerID);
+  }
+
+  public void AcceptChallenge(){
+    gameManager.AcceptChallenge();
+  }
+
+  public void DeclineChallenge(){
+    gameManager.DeclineChallenge();
+  }
+
 
 }
 

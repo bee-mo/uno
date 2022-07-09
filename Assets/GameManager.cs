@@ -44,6 +44,18 @@ public class GameManager : MonoBehaviour {
   private Button player_draw_button_;
   private Button enemy_draw_button_;
 
+  private int uno_preparation_ = -1;
+  private int uno_catch_ = -1;
+
+  public bool show_hands_ = false;
+
+  [SerializeField] private int catch_draw_count_ = 4; 
+
+  private int challenged_player_ = -1;
+  private int challenging_player_ = -1;
+  private Card challenge_top_card_;
+
+  private bool challenge_active_ = false;
 
   // Start is called before the first frame update
   void Start() {
@@ -96,8 +108,10 @@ public class GameManager : MonoBehaviour {
         DrawEnemyPlayerCard(false);
       } else {
         NextEnemy();
-        if (player_hands_[active_enemy_].GetComponent<HandController>().GetCardCount() >= initial_hand_size_) initial_draw_ = false;
-
+        if (player_hands_[active_enemy_].GetComponent<HandController>().GetCardCount() >= initial_hand_size_){
+          initial_draw_ = false;
+          SetUnoElements();
+        }
       }
 
     }
@@ -109,6 +123,11 @@ public class GameManager : MonoBehaviour {
 
       if (cardsToDraw <= 0){
         drawingPlayer = -1;
+
+        if (active_player_ != main_player_id_){
+          SetActiveEnemy(active_player_);
+        }
+        
       }
 
     }
@@ -197,7 +216,6 @@ public class GameManager : MonoBehaviour {
         SetDrawButtons(false);
       }
       deck.DrawEnemyPlayerCard(hand);
-      
       //if (!initial_draw_) NextActivePlayer();
 
     } else {
@@ -249,7 +267,7 @@ public class GameManager : MonoBehaviour {
 
     new_enemy_hand.transform.SetParent(enemy_row_.transform);
     new_enemy_hand.transform.localPosition = new Vector3(enemy_space_interval * enemy_index, 0, -200.0f);
-    new_enemy_hand.transform.localScale = new Vector3(500.0f, 500.0f, 1.0f);
+    new_enemy_hand.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
 
     // var enemy_go = GameObject.Find("Enemy Hand Layout");
     // Debug.Assert(enemy_go);
@@ -350,6 +368,8 @@ public class GameManager : MonoBehaviour {
     hand.PassAction();
 
     NextActivePlayer();
+    SetUnoElements();
+
   }
 
   private void SetDrawButtons(bool val){
@@ -357,6 +377,145 @@ public class GameManager : MonoBehaviour {
     player_draw_button_.interactable = val;
     enemy_draw_button_.interactable = val;
 
+  }
+
+
+  public void SetUnoElements(){
+
+    if (uno_preparation_ < 0){ //Previous player was not able to enter uno OR, they cleared it
+      uno_catch_ = -1;
+    } else if (player_hands_ [player_hands_.Keys.ToArray()[uno_preparation_]].GetComponent<HandController>().GetCardCount() == 1){
+      uno_catch_ = uno_preparation_;
+    } else {
+      uno_catch_ = -1;
+    }
+
+    int nextPlayer = active_player_;//GetNextActivePlayer(); //unless this was activated by a draw?
+
+    GameObject hand_go = player_hands_[nextPlayer];
+    HandController hand = hand_go.GetComponent<HandController>();
+
+    //Check for playable uno position and a challenge is not occuring (they will become prep after the challenge)
+    if (hand.GetCardCount() == 2 && hand.HandHasPlayable() && challenging_player_ < 0 && challenged_player_ < 0) { 
+      uno_preparation_ = nextPlayer;
+    } else {
+      uno_preparation_ = -1;
+    }
+
+    UpdateUnoElements();
+
+
+
+
+
+  }
+
+  public void UpdateUnoElements(){
+
+    for (int i = 0; i < player_hands_.Count; i++){
+
+      if (uno_catch_ >= 0 && uno_catch_ != i){
+        player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().SetCatchButton(true);
+      } else {
+        player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().SetCatchButton(false);
+      }
+
+
+      if (i == uno_catch_ || i == uno_preparation_){
+        player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().SetUnoButton(true);
+      } else {
+        player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().SetUnoButton(false);
+      }
+
+  
+    }
+
+  }
+
+  public void CallUno(int callingPlayer){
+
+    //If the player who called uno is the catchable player, then the uno_prep is not cleared (the prep should still have the option to call uno)
+    if (callingPlayer != uno_catch_)
+    {
+      uno_preparation_ = -1;
+    }
+    
+
+
+
+    //if uno is called by anyone, then the current catchable player is cleared
+    uno_catch_ = -1;
+
+    UpdateUnoElements();
+
+  }
+
+  public void CatchPlayer(int catchingPlayer){
+
+    //If someone catches themselves somehow return; 
+    if (catchingPlayer == uno_catch_) return; 
+ 
+    ForceDraw(catch_draw_count_, uno_catch_);
+
+    //The caught player is no longer catchable
+    uno_catch_ = -1;
+
+
+
+    UpdateUnoElements();
+
+  }
+
+  public void StartChallenge(int challengable, int challenger, Card topCard){
+
+    challenging_player_ = challenger;
+
+    challenged_player_ = challengable;
+
+    challenge_top_card_ = topCard;
+    challenge_active_ = true;
+    player_hands_ [player_hands_.Keys.ToArray()[challenger]].GetComponent<HandController>().SetChallengeButtons(true);
+
+  }
+
+
+  public void AcceptChallenge(){
+
+
+    if (player_hands_ [player_hands_.Keys.ToArray()[challenged_player_]].GetComponent<HandController>().HandHasMatchingColor(challenge_top_card_)){
+      ForceDraw(4, challenged_player_);
+    } else {
+      ForceDraw(6, challenging_player_);
+    }
+
+    player_hands_ [player_hands_.Keys.ToArray()[challenging_player_]].GetComponent<HandController>().SetChallengeButtons(false);
+    uno_catch_ = -1;
+    challenged_player_ = -1;
+    challenging_player_ = -1;
+    challenge_top_card_ = null;
+    challenge_active_ = false; 
+    NextActivePlayer();
+    SetUnoElements();
+  }
+
+
+  public void DeclineChallenge(){
+    ForceDraw(4, challenging_player_);
+
+
+    player_hands_ [player_hands_.Keys.ToArray()[challenging_player_]].GetComponent<HandController>().SetChallengeButtons(false);
+
+    uno_catch_ = -1;
+    challenged_player_ = -1;
+    challenging_player_ = -1;
+    challenge_top_card_ = null;
+    challenge_active_ = false;
+    NextActivePlayer();
+    SetUnoElements();
+  }
+
+  public bool ChallengeActive(){
+    return challenge_active_;
   }
 
 }

@@ -91,6 +91,8 @@ public class PlayPile : MonoBehaviour
 
         topCard.GetCardInfo().cardColor = colorToSet;
 
+        
+
         TMP_Text currentColorText = cardColorText.GetComponent<TMP_Text>();
         currentColorText.text = topCard.GetCardInfo().cardColor.ToString();
         colorSelectionBox.SetActive(false);
