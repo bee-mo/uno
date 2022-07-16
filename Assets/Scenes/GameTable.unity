@@ -3392,7 +3392,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1963044568
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4207,7 +4207,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4810542523870225054, guid: d2a30d793e15fce42bfe76c17e7a416c, type: 3}
       propertyPath: show_hands_
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4810542523870225054, guid: d2a30d793e15fce42bfe76c17e7a416c, type: 3}
       propertyPath: enemy_hand_prefab_

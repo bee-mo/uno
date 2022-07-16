@@ -15,14 +15,16 @@ public class HandController : MonoBehaviour {
   private Transform selectedCard_;
   private bool is_main_player_ = true;
 
+  private bool is_player_ = false;
+
   private Transform playPile;
 
   private GameManager gameManager;
   private int playerID;
   
   //if the next card drawn will be playable instantly
-  private bool next_card_playable_ = false; 
-  private bool next_card_playable_only_ = false;
+  private bool next_card_playable_ = false; //This tells us that next card drawn will be playable
+  private bool next_card_playable_only_ = false; //This tells us that a card has been drawn and only that drawn card is playable
 
   private Card playable_drawn_card_;
 
@@ -129,6 +131,14 @@ public class HandController : MonoBehaviour {
     return is_main_player_;
   }
 
+  public void SetPlayer(bool val){
+    is_player_ = val;
+  }
+
+  public bool IsPlayer(){
+    return is_player_;
+  }
+
   public bool RemoveCard(Transform removedCard) {
     //Calculate positions of current cards based on the new amount of cards
 
@@ -213,6 +223,11 @@ public class HandController : MonoBehaviour {
       gameManager.ReverseDirection();
     } else if (playedCardInfo.cardType.ToString() == "DRAW_2"){
       gameManager.ForceDraw(2, gameManager.GetNextActivePlayer());
+
+    } else if (playedCardInfo.cardType.ToString() == "WILD"){
+
+      playPileComponent.ActivateColorSelection();
+      return true;
     } else if (playedCardInfo.cardType.ToString() == "WILD_DRAW_4"){
 
       //play pile handles color selection
@@ -223,8 +238,9 @@ public class HandController : MonoBehaviour {
       //Once challenge event resolves, we set next active player (the skip) and set uno elements
       //This set up will only be for prep as a prep is not set up so no new catch will be possible here 
       //gameManager.ForceDraw(4, gameManager.GetNextActivePlayer());
-
+      playPileComponent.ActivateColorSelection();
       gameManager.StartChallenge(playerID, gameManager.GetNextActivePlayer(), topCard);
+      return true;
     }
     gameManager.NextActivePlayer();
     gameManager.SetUnoElements();
@@ -273,6 +289,24 @@ public class HandController : MonoBehaviour {
 
     return playable;
 
+
+  }
+  public Card GetPlayableCard(){
+
+    var playPileComponent = playPile.GetComponent<PlayPile>();
+    foreach (Transform child in cardParent.transform) {
+        var card = child.GetComponent<Card>();
+
+        //if we are in a state where only drawn card is playable, then card is automatically invalid
+        if (next_card_playable_only_ && !card.GetCardDrawnPlayable() ) continue;
+
+        if (CheckCardPlayValid(playPileComponent.GetTopCard().GetCardInfo(), card.GetCardInfo() ))
+        {
+          return card;
+        }
+
+    }
+    return null;
 
   }
 
@@ -336,6 +370,10 @@ public class HandController : MonoBehaviour {
       playable_drawn_card_.SetCardDrawnPlayable(false);
       playable_drawn_card_ = null;
     }
+  }
+
+  public bool CheckCardDrawn(){
+    return next_card_playable_only_;
   }
 
   public void SetUnoButton(bool val){

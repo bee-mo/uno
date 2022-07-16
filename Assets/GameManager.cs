@@ -36,13 +36,14 @@ public class GameManager : MonoBehaviour {
   private TMP_Text active_player_text_; 
 
   private bool initial_draw_ = true;
-  private int initial_hand_size_ = 3;
+  private int initial_hand_size_ = 6;
 
   private int cardsToDraw = 0;
   private int drawingPlayer = -1;
 
   private Button player_draw_button_;
-  private Button enemy_draw_button_;
+  //private Button enemy_draw_button_;
+  private Button pass_action_button_;
 
   private int uno_preparation_ = -1;
   private int uno_catch_ = -1;
@@ -56,6 +57,14 @@ public class GameManager : MonoBehaviour {
   private Card challenge_top_card_;
 
   private bool challenge_active_ = false;
+
+  private bool computer_wait_ = false;
+  private float computer_wait_delay = 2.0f;
+
+  private bool color_selection_active_ = false;
+
+  private bool computer_catch_attempted_ = false;
+  private bool computer_uno_attempted_ = false;
 
   // Start is called before the first frame update
   void Start() {
@@ -79,7 +88,8 @@ public class GameManager : MonoBehaviour {
     //play_pile_.GetComponent<PlayPile>().DrawFromDeck();
 
     player_draw_button_ = GameObject.Find("Draw Card").transform.GetComponent<Button>();
-    enemy_draw_button_ = GameObject.Find("Enemy Draw Card").transform.GetComponent<Button>();
+    //enemy_draw_button_ = GameObject.Find("Enemy Draw Card").transform.GetComponent<Button>();
+    pass_action_button_ = GameObject.Find("Pass Action Button").transform.GetComponent<Button>();
 
 
     CreateMainPlayer(main_player_id_);
@@ -116,7 +126,8 @@ public class GameManager : MonoBehaviour {
 
     }
 
-    if (cardsToDraw > 0 && drawingPlayer >= 0 && !table_deck_.GetComponent<GameDeck>().CheckCardDrawInProgess()){
+    if (cardsToDraw > 0 && drawingPlayer >= 0 && !table_deck_.GetComponent<GameDeck>().CheckCardDrawInProgess() ){
+
 
       DrawToHand(drawingPlayer);
       cardsToDraw+= -1;
@@ -132,6 +143,103 @@ public class GameManager : MonoBehaviour {
 
     }
 
+
+    //Is a bot
+
+
+    if (!initial_draw_ && cardsToDraw <= 0 &&  !player_hands_[active_player_].GetComponent<HandController>().IsPlayer() && !computer_wait_){
+
+      computer_wait_ = true;
+
+      StartCoroutine(ComputerPlay());
+
+
+    }
+
+
+  }
+
+  private IEnumerator ComputerPlay(){
+    yield return new WaitForSeconds(computer_wait_delay);
+    HandController hand = player_hands_[active_player_].GetComponent<HandController>();
+
+    Card playableCard = hand.GetPlayableCard();
+
+    if (color_selection_active_){
+
+
+      if (!hand.IsPlayer()){
+
+        int randomColor = Random.Range(0, 4);
+        play_pile_.GetComponent<PlayPile>().SetColor(randomColor);
+      }
+
+    } else if (challenge_active_){
+
+
+      if (!player_hands_[challenging_player_].GetComponent<HandController>().IsPlayer()){
+        int randomChoice = Random.Range(0,2);
+        if (randomChoice == 0){
+          AcceptChallenge();
+        } else if (randomChoice == 1){
+          DeclineChallenge();
+        }
+
+      }
+
+    } else if (uno_catch_ >= 0 && !computer_catch_attempted_){
+
+
+      //Loop through each player so each computer player can attempt to catch the catchable player as well as the uno player to call uno
+      foreach (int index in  player_hands_.Keys.ToArray()){
+
+        HandController currentHand = player_hands_[index].GetComponent<HandController>();
+
+        if (!currentHand.IsPlayer() && index != uno_catch_){
+          int randomChoice = Random.Range(0,10);
+          if (randomChoice < 2){
+            CatchPlayer(index);
+            break;
+          }
+
+        } else if (!currentHand.IsPlayer() && index == uno_catch_){ //
+          int randomChoice = Random.Range(0,10);
+          if (randomChoice < 2){
+            CallUno(index);
+            break;
+          }
+
+        }
+
+      }
+      computer_catch_attempted_ = true; //so that the attemps only occur once
+
+    } else if (uno_preparation_ >= 0 && !computer_uno_attempted_){
+
+
+      if (!hand.IsPlayer()){
+        int randomChoice = Random.Range(0,2);
+        if (randomChoice == 0){
+          CallUno(active_player_);
+        }
+
+
+      }
+
+      computer_uno_attempted_ = true;
+
+
+    } else if (playableCard != null){
+
+      playableCard.SelectCard();
+      playableCard.PlayCard();
+    } else if (!hand.CheckCardDrawn()) {
+      DrawEnemyPlayerCard(true);
+    } else { //card has been drawn
+      PassActivePlayerAction();
+      //hand.PassAction();
+    }
+    computer_wait_ = false;
 
   }
 
@@ -248,6 +356,7 @@ public class GameManager : MonoBehaviour {
 
     HandController hand = main_go.GetComponent<HandController>();
     hand.SetAsMainPlayer();
+    hand.SetPlayer(true);
     hand.SetPlayerID(id);
     player_hands_.Add(id, main_go);
 
@@ -274,6 +383,7 @@ public class GameManager : MonoBehaviour {
 
     HandController hand = new_enemy_hand.GetComponent<HandController>();
     hand.SetAsEnemy();
+    hand.SetPlayer(false);
     hand.SetPlayerID(id);
 
     player_hands_.Add(id, new_enemy_hand);
@@ -375,7 +485,9 @@ public class GameManager : MonoBehaviour {
   private void SetDrawButtons(bool val){
 
     player_draw_button_.interactable = val;
-    enemy_draw_button_.interactable = val;
+    //enemy_draw_button_.interactable = val;
+    pass_action_button_.interactable = !val;
+
 
   }
 
@@ -402,6 +514,8 @@ public class GameManager : MonoBehaviour {
       uno_preparation_ = -1;
     }
 
+    computer_catch_attempted_ = false;
+    computer_uno_attempted_ = false;
     UpdateUnoElements();
 
 
@@ -516,6 +630,10 @@ public class GameManager : MonoBehaviour {
 
   public bool ChallengeActive(){
     return challenge_active_;
+  }
+
+  public void SetColorSelection(bool val){
+    color_selection_active_ = val;
   }
 
 }

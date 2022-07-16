@@ -17,6 +17,8 @@ public class PlayPile : MonoBehaviour
     private GameObject cardPileParent;
     private GameObject topCardGO;
 
+    private GameManager gameManager;
+
     void Awake(){
         cardColorText = GameObject.Find("Card Color Text").transform;
         colorSelectionBox = GameObject.Find("Color Selection");
@@ -28,6 +30,8 @@ public class PlayPile : MonoBehaviour
 
         topCardGO = new GameObject("Top Card");
         topCardGO.transform.SetParent(transform, false);
+
+        gameManager = GameObject.Find("Game Manager").transform.GetComponent<GameManager>();
     }
 
 
@@ -55,6 +59,10 @@ public class PlayPile : MonoBehaviour
         card.SetPlayCard(true);
         card.FlipCard(Card.CardPosition.FRONT);
         SetTopCard(card);
+        CardGenerator.CardInfo newInfo = card.GetCardInfo();
+        if (newInfo.cardType.ToString() == "WILD_DRAW_4" || newInfo.cardType.ToString() == "WILD"){
+            ActivateColorSelection();
+        }
         
     }
 
@@ -73,9 +81,10 @@ public class PlayPile : MonoBehaviour
             //cardColorText = GameObject.Find("Card Color Text").transform;
             TMP_Text currentColorText = cardColorText.GetComponent<TMP_Text>();
             currentColorText.text = newInfo.cardColor.ToString();
-        } else {
-            colorSelectionBox.SetActive(true);
         }
+        // } else {
+        //     colorSelectionBox.SetActive(true);
+        // }
 
         
 
@@ -96,7 +105,15 @@ public class PlayPile : MonoBehaviour
         TMP_Text currentColorText = cardColorText.GetComponent<TMP_Text>();
         currentColorText.text = topCard.GetCardInfo().cardColor.ToString();
         colorSelectionBox.SetActive(false);
+        gameManager.SetColorSelection(false);
+        gameManager.NextActivePlayer();
+        gameManager.SetUnoElements();
 
+    }
+
+    public void ActivateColorSelection(){
+        colorSelectionBox.SetActive(true);
+        gameManager.SetColorSelection(true);
     }
 
     public List<CardGenerator.CardInfo> GetPlayedCards(){
