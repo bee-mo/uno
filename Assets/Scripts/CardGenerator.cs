@@ -16,6 +16,7 @@ public class CardGenerator : MonoBehaviour {
     }
     public CardColor cardColor {
       get { return color_; }
+      set { color_ = value; }
     }
 
     public Sprite cardSprite {
@@ -43,6 +44,8 @@ public class CardGenerator : MonoBehaviour {
 
   void Start() {
     GameObject deck_go = GameObject.Find("GameDeck");
+
+    
     Debug.Assert(deck_go != null);
     deck_ = deck_go.GetComponent<GameDeck>();
     Debug.Assert(deck_);
@@ -50,9 +53,7 @@ public class CardGenerator : MonoBehaviour {
     card_type_sprite_map_ = new Dictionary<CardType, Sprite>();
     RegisterCardSprites();
 
-    unplayed_cards_ = new List<CardInfo>();
-    InitializeUnplayedCards();
-    UpdateDeck();
+    ResetDeck();
   }
 
   static CardGenerator generator_ = null;
@@ -90,7 +91,10 @@ public class CardGenerator : MonoBehaviour {
   }
 
   public CardInfo GetNextCardFromDeck() {
-    if (unplayed_cards_.Count == 0) return null;
+    //if (unplayed_cards_.Count == 0) return null;
+    PlayPile play_pile_comp = GameObject.Find("PlayPile").GetComponent<PlayPile>();
+
+    if (unplayed_cards_.Count == 0) ReshufflePlayedCardsToDeck(play_pile_comp.GetPlayedCards());
 
     int card_index = Random.Range(0, unplayed_cards_.Count - 1);
     var card = unplayed_cards_[card_index];
@@ -98,6 +102,17 @@ public class CardGenerator : MonoBehaviour {
     unplayed_cards_.RemoveAt(card_index);
     UpdateDeck();
     return card;
+  }
+
+  public void ReshufflePlayedCardsToDeck(List<CardInfo> playedCards){
+    foreach (CardInfo currentCardInfo in playedCards){
+
+      unplayed_cards_.Add(currentCardInfo);
+    }
+    Debug.Log("Deck has been reshuffled");
+
+    UpdateDeck();
+
   }
 
   public Sprite GetCardBackSprite() {
@@ -350,5 +365,11 @@ public class CardGenerator : MonoBehaviour {
       Mathf.Clamp((float)r / 255, 0.0f, 1.0f),
       Mathf.Clamp((float)g / 255, 0.0f, 1.0f),
       Mathf.Clamp((float)b / 255, 0.0f, 1.0f));
+  }
+
+  public void ResetDeck(){
+    unplayed_cards_ = new List<CardInfo>();
+    InitializeUnplayedCards();
+    UpdateDeck();
   }
 }

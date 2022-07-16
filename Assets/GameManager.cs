@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using System.Linq;
 
 public class GameManager : MonoBehaviour {
 
@@ -9,16 +11,60 @@ public class GameManager : MonoBehaviour {
 
   // Store the player id and their associated hands' game objects
   private Dictionary<int, GameObject> player_hands_;
+
+
   private GameObject table_deck_;
+
+  private GameObject play_pile_;
+
+  private GameObject restart_button_;
+
   private GameObject enemy_row_;
   private Dictionary<int, int> enemy_id_to_index_;
   private int active_enemy_ = -1;
+
 
   // placeholder ids
   private int main_player_id_ = 0;
   private int enemy_player_id_ = 1;
 
   private LerpAnimator enemy_hands_lerper_;
+
+  private int active_player_ = 0;
+  private int direction_ = 1;
+  private TMP_Text active_enemy_text_; 
+  private TMP_Text active_player_text_; 
+
+  private bool initial_draw_ = true;
+  private int initial_hand_size_ = 6;
+
+  private int cardsToDraw = 0;
+  private int drawingPlayer = -1;
+
+  private Button player_draw_button_;
+  //private Button enemy_draw_button_;
+  private Button pass_action_button_;
+
+  private int uno_preparation_ = -1;
+  private int uno_catch_ = -1;
+
+  public bool show_hands_ = false;
+
+  [SerializeField] private int catch_draw_count_ = 4; 
+
+  private int challenged_player_ = -1;
+  private int challenging_player_ = -1;
+  private Card challenge_top_card_;
+
+  private bool challenge_active_ = false;
+
+  private bool computer_wait_ = false;
+  private float computer_wait_delay = 2.0f;
+
+  private bool color_selection_active_ = false;
+
+  private bool computer_catch_attempted_ = false;
+  private bool computer_uno_attempted_ = false;
 
   // Start is called before the first frame update
   void Start() {
@@ -33,21 +79,167 @@ public class GameManager : MonoBehaviour {
     player_hands_ = new Dictionary<int, GameObject>();
 
     table_deck_ = GameObject.Find("GameDeck");
+    play_pile_ = GameObject.Find("PlayPile");
+    restart_button_ = GameObject.Find("Restart Button");
     Debug.Assert(table_deck_);
+
+    active_enemy_text_ = GameObject.Find("Active Enemy Text").transform.GetComponent<TMP_Text>();
+    active_player_text_ = GameObject.Find("Active Player Text").transform.GetComponent<TMP_Text>();
+    //play_pile_.GetComponent<PlayPile>().DrawFromDeck();
+
+    player_draw_button_ = GameObject.Find("Draw Card").transform.GetComponent<Button>();
+    //enemy_draw_button_ = GameObject.Find("Enemy Draw Card").transform.GetComponent<Button>();
+    pass_action_button_ = GameObject.Find("Pass Action Button").transform.GetComponent<Button>();
+
 
     CreateMainPlayer(main_player_id_);
 
-    int enemy_count = 5;
+
+    int enemy_count = 3;
     for (int i = 1; i <= enemy_count; ++i) {
       if (active_enemy_ == -1) active_enemy_ = i;
       CreateEnemyPlayer(i);
     }
+    active_enemy_text_.text =  "Current Active Enemy: " + active_enemy_.ToString();
+    active_player_text_.text =  "Active Player ID: " + player_hands_.Keys.ToArray()[active_player_].ToString();
 
     UpdatePlayerCountInfo();
+    ResetGame();
   }
 
   // Update is called once per frame
   void Update() {
+
+    if (initial_draw_){
+
+      if (player_hands_[main_player_id_].GetComponent<HandController>().GetCardCount() < initial_hand_size_){
+        DrawMainPlayerCard(false);
+      } else if (player_hands_[active_enemy_].GetComponent<HandController>().GetCardCount() < initial_hand_size_){
+        DrawEnemyPlayerCard(false);
+      } else {
+        NextEnemy();
+        if (player_hands_[active_enemy_].GetComponent<HandController>().GetCardCount() >= initial_hand_size_){
+          initial_draw_ = false;
+          SetUnoElements();
+        }
+      }
+
+    }
+
+    if (cardsToDraw > 0 && drawingPlayer >= 0 && !table_deck_.GetComponent<GameDeck>().CheckCardDrawInProgess() ){
+
+
+      DrawToHand(drawingPlayer);
+      cardsToDraw+= -1;
+
+      if (cardsToDraw <= 0){
+        drawingPlayer = -1;
+
+        if (active_player_ != main_player_id_){
+          SetActiveEnemy(active_player_);
+        }
+        
+      }
+
+    }
+
+
+    //Is a bot
+
+
+    if (!initial_draw_ && cardsToDraw <= 0 &&  !player_hands_[active_player_].GetComponent<HandController>().IsPlayer() && !computer_wait_){
+
+      computer_wait_ = true;
+
+      StartCoroutine(ComputerPlay());
+
+
+    }
+
+
+  }
+
+  private IEnumerator ComputerPlay(){
+    yield return new WaitForSeconds(computer_wait_delay);
+    HandController hand = player_hands_[active_player_].GetComponent<HandController>();
+
+    Card playableCard = hand.GetPlayableCard();
+
+    if (color_selection_active_){
+
+
+      if (!hand.IsPlayer()){
+
+        int randomColor = Random.Range(0, 4);
+        play_pile_.GetComponent<PlayPile>().SetColor(randomColor);
+      }
+
+    } else if (challenge_active_){
+
+
+      if (!player_hands_[challenging_player_].GetComponent<HandController>().IsPlayer()){
+        int randomChoice = Random.Range(0,2);
+        if (randomChoice == 0){
+          AcceptChallenge();
+        } else if (randomChoice == 1){
+          DeclineChallenge();
+        }
+
+      }
+
+    } else if (uno_catch_ >= 0 && !computer_catch_attempted_){
+
+
+      //Loop through each player so each computer player can attempt to catch the catchable player as well as the uno player to call uno
+      foreach (int index in  player_hands_.Keys.ToArray()){
+
+        HandController currentHand = player_hands_[index].GetComponent<HandController>();
+
+        if (!currentHand.IsPlayer() && index != uno_catch_){
+          int randomChoice = Random.Range(0,10);
+          if (randomChoice < 2){
+            CatchPlayer(index);
+            break;
+          }
+
+        } else if (!currentHand.IsPlayer() && index == uno_catch_){ //
+          int randomChoice = Random.Range(0,10);
+          if (randomChoice < 2){
+            CallUno(index);
+            break;
+          }
+
+        }
+
+      }
+      computer_catch_attempted_ = true; //so that the attemps only occur once
+
+    } else if (uno_preparation_ >= 0 && !computer_uno_attempted_){
+
+
+      if (!hand.IsPlayer()){
+        int randomChoice = Random.Range(0,2);
+        if (randomChoice == 0){
+          CallUno(active_player_);
+        }
+
+
+      }
+
+      computer_uno_attempted_ = true;
+
+
+    } else if (playableCard != null){
+
+      playableCard.SelectCard();
+      playableCard.PlayCard();
+    } else if (!hand.CheckCardDrawn()) {
+      DrawEnemyPlayerCard(true);
+    } else { //card has been drawn
+      PassActivePlayerAction();
+      //hand.PassAction();
+    }
+    computer_wait_ = false;
 
   }
 
@@ -59,7 +251,27 @@ public class GameManager : MonoBehaviour {
     SetActiveEnemy(next_enemy);
   }
 
-  public void DrawMainPlayerCard() {
+
+  public void DrawToHand(int handIndex){
+    if (!CardGenerator.GetSingleton().HasCardsLeft()) {
+      Debug.Log("No more cards to play");
+    }
+
+    GameObject hand_go = player_hands_[handIndex];
+
+    GameDeck deck = table_deck_.GetComponent<GameDeck>();
+    HandController hand = hand_go.GetComponent<HandController>();
+    
+
+    if (hand.IsMainPlayer()){
+      deck.DrawMainPlayerCard(hand);  
+    } else {
+      deck.DrawEnemyPlayerCard(hand);  
+    }
+    
+  }
+
+  public void DrawMainPlayerCard(bool playable) {
     if (!CardGenerator.GetSingleton().HasCardsLeft()) {
       Debug.Log("No more cards to play");
     }
@@ -72,10 +284,26 @@ public class GameManager : MonoBehaviour {
     HandController hand = main_go.GetComponent<HandController>();
     Debug.Assert(hand);
 
-    deck.DrawMainPlayerCard(hand);
+    if (player_hands_.Keys.ToArray()[active_player_] == main_player_id_ || initial_draw_){
+      if (playable){
+        hand.NextCardPlayable();
+        SetDrawButtons(false);
+      }
+
+      deck.DrawMainPlayerCard(hand);
+
+
+
+      //if (!initial_draw_) NextActivePlayer();
+
+
+  } else {
+      Debug.Log("Not your turn");
+    }
+
   }
 
-  public void DrawEnemyPlayerCard() {
+  public void DrawEnemyPlayerCard(bool playable) {
     if (!CardGenerator.GetSingleton().HasCardsLeft()) {
       Debug.Log("No more cards to play");
     }
@@ -88,7 +316,21 @@ public class GameManager : MonoBehaviour {
     HandController hand = enemy_go.GetComponent<HandController>();
     Debug.Assert(hand);
 
-    deck.DrawEnemyPlayerCard(hand);
+
+    if (player_hands_.Keys.ToArray()[active_player_] == active_enemy_ || initial_draw_){
+      
+      if (playable){
+        hand.NextCardPlayable();
+        SetDrawButtons(false);
+      }
+      deck.DrawEnemyPlayerCard(hand);
+      //if (!initial_draw_) NextActivePlayer();
+
+    } else {
+      Debug.Log("Not the active player's turn");
+    }
+
+    ///deck.DrawEnemyPlayerCard(hand);
   }
 
   private void SetActiveEnemy(int next_enemy_id) {
@@ -104,6 +346,7 @@ public class GameManager : MonoBehaviour {
     ), 3.0f);
 
     active_enemy_ = next_enemy_id;
+    active_enemy_text_.text = "Current Active Enemy: " + active_enemy_.ToString();
   }
 
   private void CreateMainPlayer(int id) {
@@ -113,8 +356,10 @@ public class GameManager : MonoBehaviour {
 
     HandController hand = main_go.GetComponent<HandController>();
     hand.SetAsMainPlayer();
-
+    hand.SetPlayer(true);
+    hand.SetPlayerID(id);
     player_hands_.Add(id, main_go);
+
   }
 
   private void CreateEnemyPlayer(int id) {
@@ -131,13 +376,15 @@ public class GameManager : MonoBehaviour {
 
     new_enemy_hand.transform.SetParent(enemy_row_.transform);
     new_enemy_hand.transform.localPosition = new Vector3(enemy_space_interval * enemy_index, 0, -200.0f);
-    new_enemy_hand.transform.localScale = new Vector3(500.0f, 500.0f, 1.0f);
+    new_enemy_hand.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
 
     // var enemy_go = GameObject.Find("Enemy Hand Layout");
     // Debug.Assert(enemy_go);
 
     HandController hand = new_enemy_hand.GetComponent<HandController>();
     hand.SetAsEnemy();
+    hand.SetPlayer(false);
+    hand.SetPlayerID(id);
 
     player_hands_.Add(id, new_enemy_hand);
     enemy_id_to_index_.Add(id, enemy_index);
@@ -157,4 +404,236 @@ public class GameManager : MonoBehaviour {
     Debug.Assert(manager);
     return manager;
   }
+
+  public void NextActivePlayer(){
+    active_player_ = GetNextActivePlayer();//mod ((active_player_ + direction_), (player_hands_.Count));
+
+
+    active_player_text_.text = "Active Player ID: " + player_hands_.Keys.ToArray()[active_player_].ToString();
+    if (active_player_ != main_player_id_){ //show the hand
+      SetActiveEnemy(active_player_);
+    }
+
+    SetDrawButtons(true);
+
+  }
+
+  public int GetNextActivePlayer(){
+    return mod((active_player_ + direction_), (player_hands_.Count));
+  }
+  int mod(int x, int m) {
+    return (x%m + m)%m;
+  }
+
+  public void ReverseDirection(){
+    direction_ = -direction_;
+  }
+
+  public int GetActivePlayerID(){
+    return player_hands_.Keys.ToArray()[active_player_];
+  }
+
+  public void ForceDraw(int count, int targetHand){
+    cardsToDraw = count;
+
+    drawingPlayer = targetHand;
+    if (targetHand != main_player_id_){ //show the hand
+      SetActiveEnemy(targetHand);
+    }
+  }
+
+  public void ResetGame(){
+
+
+    CardGenerator.GetSingleton().ResetDeck(); 
+    PlayPile playPileComponent = play_pile_.GetComponent<PlayPile>();
+
+    playPileComponent.ResetPlayPile();
+    playPileComponent.ResetTopCard();
+    playPileComponent.DrawFromDeck();
+
+    for (int i = 0; i < player_hands_.Count; i++){
+      player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().ClearHand();
+  
+    }
+
+    initial_draw_ = true;
+    direction_ = 1;
+    active_player_ = 0;
+    active_enemy_ = 1;
+
+    SetRestartButton(false);
+
+
+  }
+
+  public void SetRestartButton(bool val){
+    restart_button_.SetActive(val);
+  }
+
+  public void PassActivePlayerAction(){
+    GameObject hand_go = player_hands_[active_player_];
+    HandController hand = hand_go.GetComponent<HandController>();
+
+    hand.PassAction();
+
+    NextActivePlayer();
+    SetUnoElements();
+
+  }
+
+  private void SetDrawButtons(bool val){
+
+    player_draw_button_.interactable = val;
+    //enemy_draw_button_.interactable = val;
+    pass_action_button_.interactable = !val;
+
+
+  }
+
+
+  public void SetUnoElements(){
+
+    if (uno_preparation_ < 0){ //Previous player was not able to enter uno OR, they cleared it
+      uno_catch_ = -1;
+    } else if (player_hands_ [player_hands_.Keys.ToArray()[uno_preparation_]].GetComponent<HandController>().GetCardCount() == 1){
+      uno_catch_ = uno_preparation_;
+    } else {
+      uno_catch_ = -1;
+    }
+
+    int nextPlayer = active_player_;//GetNextActivePlayer(); //unless this was activated by a draw?
+
+    GameObject hand_go = player_hands_[nextPlayer];
+    HandController hand = hand_go.GetComponent<HandController>();
+
+    //Check for playable uno position and a challenge is not occuring (they will become prep after the challenge)
+    if (hand.GetCardCount() == 2 && hand.HandHasPlayable() && challenging_player_ < 0 && challenged_player_ < 0) { 
+      uno_preparation_ = nextPlayer;
+    } else {
+      uno_preparation_ = -1;
+    }
+
+    computer_catch_attempted_ = false;
+    computer_uno_attempted_ = false;
+    UpdateUnoElements();
+
+
+
+
+
+  }
+
+  public void UpdateUnoElements(){
+
+    for (int i = 0; i < player_hands_.Count; i++){
+
+      if (uno_catch_ >= 0 && uno_catch_ != i){
+        player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().SetCatchButton(true);
+      } else {
+        player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().SetCatchButton(false);
+      }
+
+
+      if (i == uno_catch_ || i == uno_preparation_){
+        player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().SetUnoButton(true);
+      } else {
+        player_hands_ [player_hands_.Keys.ToArray()[i]].GetComponent<HandController>().SetUnoButton(false);
+      }
+
+  
+    }
+
+  }
+
+  public void CallUno(int callingPlayer){
+
+    //If the player who called uno is the catchable player, then the uno_prep is not cleared (the prep should still have the option to call uno)
+    if (callingPlayer != uno_catch_)
+    {
+      uno_preparation_ = -1;
+    }
+    
+
+
+
+    //if uno is called by anyone, then the current catchable player is cleared
+    uno_catch_ = -1;
+
+    UpdateUnoElements();
+
+  }
+
+  public void CatchPlayer(int catchingPlayer){
+
+    //If someone catches themselves somehow return; 
+    if (catchingPlayer == uno_catch_) return; 
+ 
+    ForceDraw(catch_draw_count_, uno_catch_);
+
+    //The caught player is no longer catchable
+    uno_catch_ = -1;
+
+
+
+    UpdateUnoElements();
+
+  }
+
+  public void StartChallenge(int challengable, int challenger, Card topCard){
+
+    challenging_player_ = challenger;
+
+    challenged_player_ = challengable;
+
+    challenge_top_card_ = topCard;
+    challenge_active_ = true;
+    player_hands_ [player_hands_.Keys.ToArray()[challenger]].GetComponent<HandController>().SetChallengeButtons(true);
+
+  }
+
+
+  public void AcceptChallenge(){
+
+
+    if (player_hands_ [player_hands_.Keys.ToArray()[challenged_player_]].GetComponent<HandController>().HandHasMatchingColor(challenge_top_card_)){
+      ForceDraw(4, challenged_player_);
+    } else {
+      ForceDraw(6, challenging_player_);
+    }
+
+    player_hands_ [player_hands_.Keys.ToArray()[challenging_player_]].GetComponent<HandController>().SetChallengeButtons(false);
+    uno_catch_ = -1;
+    challenged_player_ = -1;
+    challenging_player_ = -1;
+    challenge_top_card_ = null;
+    challenge_active_ = false; 
+    NextActivePlayer();
+    SetUnoElements();
+  }
+
+
+  public void DeclineChallenge(){
+    ForceDraw(4, challenging_player_);
+
+
+    player_hands_ [player_hands_.Keys.ToArray()[challenging_player_]].GetComponent<HandController>().SetChallengeButtons(false);
+
+    uno_catch_ = -1;
+    challenged_player_ = -1;
+    challenging_player_ = -1;
+    challenge_top_card_ = null;
+    challenge_active_ = false;
+    NextActivePlayer();
+    SetUnoElements();
+  }
+
+  public bool ChallengeActive(){
+    return challenge_active_;
+  }
+
+  public void SetColorSelection(bool val){
+    color_selection_active_ = val;
+  }
+
 }

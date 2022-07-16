@@ -43,6 +43,9 @@ public class Card : MonoBehaviour {
   private Vector3 end_play_card_scale_;
 
   private float play_card_lerp = 0.0f;
+  private bool play_card_complete = false;
+
+  private bool card_drawn_playable_ = false; //by default, a card cannot be played after a draw action
 
   void Awake() {
     display_image_ = transform.Find("Display Image");
@@ -58,7 +61,7 @@ public class Card : MonoBehaviour {
     card_height_ = GetComponent<RectTransform>().rect.height;
     deselected_position_y_ = 0.0f;//transform.localPosition.y;
 
-    selected_position_y_ = 0.4f * card_height_;
+    selected_position_y_ = 0.6f * card_height_;
   }
 
   void Update() {
@@ -109,9 +112,14 @@ public class Card : MonoBehaviour {
 
   public void PlayCard() {
     if (selecting_card_) {
-      is_played = true;
-      handControl_.RemoveCard(transform);
-      FlipCard(CardPosition.FRONT);
+
+      if (handControl_.RemoveCard(transform)){
+
+        
+        
+        FlipCard(CardPosition.FRONT);
+        is_played = true;
+      }
     }
 
   }
@@ -133,7 +141,8 @@ public class Card : MonoBehaviour {
   }
 
   private void HandleCardPlay() {
-    if (!is_played) return;
+    if (!is_played || play_card_complete) return;
+
 
     if (play_card_lerp < 1.0f) {
 
@@ -142,6 +151,11 @@ public class Card : MonoBehaviour {
       transform.localScale = Vector3.Lerp(start_play_card_scale_, end_play_card_scale_, play_card_lerp);
 
       play_card_lerp = Mathf.Clamp(play_card_lerp + draw_speed_ * Time.deltaTime, 0.0f, 1.0f);
+    } else {
+      transform.localPosition = end_play_card_position_;
+      transform.eulerAngles = end_play_card_rotation_;
+      transform.localScale = end_play_card_scale_;
+      play_card_complete = true;
     }
 
 
@@ -149,6 +163,7 @@ public class Card : MonoBehaviour {
 
   private void HandleInitCardDraw() {
     if (is_played) return;
+
 
     if (!start_draw_card_) return;
     if (start_draw_card_lerp_ == 0.0f) {
@@ -278,6 +293,22 @@ public class Card : MonoBehaviour {
 
     start_card_rearrange_lerp_ = 0.0f;
 
+  }
+
+  public void SetPlayCard(bool new_is_played){
+    is_played = new_is_played;
+  }
+
+  public CardGenerator.CardInfo GetCardInfo(){
+    return card_info_;
+  }
+
+  public void SetCardDrawnPlayable(bool val){
+    card_drawn_playable_ = val;
+  }
+
+  public bool GetCardDrawnPlayable(){
+    return card_drawn_playable_;
   }
 
 }
